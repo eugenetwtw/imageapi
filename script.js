@@ -9,9 +9,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Initialize Supabase
     initializeSupabase();
-    
-    // Load gallery images
-    loadGallery();
 });
 
 // Initialize UI elements and event listeners
@@ -84,9 +81,6 @@ function initializeUI() {
     const downloadBtn = document.getElementById('download-btn');
     downloadBtn.addEventListener('click', downloadImage);
     
-    // Save button
-    const saveBtn = document.getElementById('save-btn');
-    saveBtn.addEventListener('click', saveToGallery);
 }
 
 // Initialize Supabase client
@@ -215,13 +209,11 @@ async function generateImage() {
     const loading = document.getElementById('loading');
     const resultContainer = document.getElementById('result-container');
     const downloadBtn = document.getElementById('download-btn');
-    const saveBtn = document.getElementById('save-btn');
     
     resultSection.classList.remove('hidden');
     loading.classList.remove('hidden');
     resultContainer.innerHTML = '';
     downloadBtn.classList.add('hidden');
-    saveBtn.classList.add('hidden');
     
     try {
         // Check if OpenAI API key is configured
@@ -253,7 +245,6 @@ async function generateImage() {
             
             resultContainer.appendChild(img);
             downloadBtn.classList.remove('hidden');
-            saveBtn.classList.remove('hidden');
         } else {
             throw new Error('Failed to generate image. Please try again.');
         }
@@ -356,151 +347,7 @@ function downloadImage() {
     document.body.removeChild(link);
 }
 
-// Save image to gallery (Supabase)
-async function saveToGallery() {
-    if (!generatedImage) return;
-    
-    try {
-        // Check if Supabase is initialized
-        if (!window.supabase) {
-            throw new Error('Database connection not initialized');
-        }
-        
-        const timestamp = new Date().toISOString();
-        const { data, error } = await window.supabase
-            .from('photo2writing')
-            .insert([
-                {
-                    prompt: generatedImage.prompt,
-                    image_data: generatedImage.data,
-                    format: generatedImage.format,
-                    created_at: timestamp
-                }
-            ]);
-        
-        if (error) throw error;
-        
-        showSuccess('Image saved to gallery successfully!');
-        
-        // Reload gallery
-        loadGallery();
-    } catch (error) {
-        console.error('Error saving to gallery:', error);
-        showError('Failed to save image to gallery. Please try again.');
-    }
-}
 
-// Load gallery images from Supabase
-async function loadGallery() {
-    try {
-        // Check if Supabase is initialized
-        if (!window.supabase) {
-            throw new Error('Database connection not initialized');
-        }
-        
-        const { data, error } = await window.supabase
-            .from('photo2writing')
-            .select('*')
-            .order('created_at', { ascending: false });
-        
-        if (error) throw error;
-        
-        const galleryContainer = document.getElementById('gallery-container');
-        const emptyMessage = document.getElementById('gallery-empty-message');
-        
-        // Clear existing gallery
-        galleryContainer.innerHTML = '';
-        
-        if (data && data.length > 0) {
-            emptyMessage.style.display = 'none';
-            
-            // Add each image to gallery
-            data.forEach(item => {
-                const galleryItem = document.createElement('div');
-                galleryItem.className = 'gallery-item';
-                
-                const img = document.createElement('img');
-                img.src = `data:image/${item.format};base64,${item.image_data}`;
-                img.alt = item.prompt;
-                
-                const overlay = document.createElement('div');
-                overlay.className = 'gallery-item-overlay';
-                
-                const prompt = document.createElement('p');
-                prompt.textContent = item.prompt;
-                
-                const actions = document.createElement('div');
-                actions.className = 'gallery-item-actions';
-                
-                const downloadBtn = document.createElement('button');
-                downloadBtn.innerHTML = '<i class="fas fa-download"></i> Download';
-                downloadBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    downloadGalleryImage(item);
-                });
-                
-                const deleteBtn = document.createElement('button');
-                deleteBtn.innerHTML = '<i class="fas fa-trash"></i> Delete';
-                deleteBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    deleteGalleryImage(item.id);
-                });
-                
-                actions.appendChild(downloadBtn);
-                actions.appendChild(deleteBtn);
-                
-                overlay.appendChild(prompt);
-                overlay.appendChild(actions);
-                
-                galleryItem.appendChild(img);
-                galleryItem.appendChild(overlay);
-                
-                galleryContainer.appendChild(galleryItem);
-            });
-        } else {
-            emptyMessage.style.display = 'block';
-        }
-    } catch (error) {
-        console.error('Error loading gallery:', error);
-        const galleryContainer = document.getElementById('gallery-container');
-        galleryContainer.innerHTML = `<div class="error">Failed to load gallery. Please try again.</div>`;
-    }
-}
-
-// Download gallery image
-function downloadGalleryImage(item) {
-    const link = document.createElement('a');
-    link.href = `data:image/${item.format};base64,${item.image_data}`;
-    link.download = `gallery-image-${Date.now()}.${item.format}`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-}
-
-// Delete gallery image
-async function deleteGalleryImage(id) {
-    try {
-        // Check if Supabase is initialized
-        if (!window.supabase) {
-            throw new Error('Database connection not initialized');
-        }
-        
-        const { error } = await window.supabase
-            .from('photo2writing')
-            .delete()
-            .eq('id', id);
-        
-        if (error) throw error;
-        
-        showSuccess('Image deleted successfully!');
-        
-        // Reload gallery
-        loadGallery();
-    } catch (error) {
-        console.error('Error deleting image:', error);
-        showError('Failed to delete image. Please try again.');
-    }
-}
 
 // Show error message
 function showError(message) {

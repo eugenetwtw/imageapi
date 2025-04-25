@@ -400,7 +400,7 @@ async function saveToGallery() {
                 imageData: generatedImage.data,
                 format: generatedImage.format,
                 duration: lastGenerationDuration,
-                isEdit: isEditOperation,
+                isEdit: isEditOperation === true,
                 sourceType: isEditOperation ? 'edit' : 'text'
             })
         });

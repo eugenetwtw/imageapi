@@ -200,7 +200,7 @@
                         
                         // Type cell
                         const typeCell = document.createElement('td');
-                        typeCell.textContent = item.is_edit ? 'Edit' : 'Text-to-Image';
+                        typeCell.textContent = item.is_edit === true ? 'Edit' : 'Text-to-Image';
                         
                         // Duration cell
                         const durationCell = document.createElement('td');

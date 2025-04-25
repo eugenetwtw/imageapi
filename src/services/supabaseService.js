@@ -40,6 +40,8 @@ exports.getAllImages = async () => {
  * @returns {Object} Saved image data
  */
 exports.saveImage = async (prompt, imageData, format, duration = 0, isEdit = false, sourceType = 'text') => {
+  // Ensure isEdit is a boolean
+  const isEditBoolean = isEdit === true;
   try {
     const timestamp = new Date().toISOString();
     
@@ -52,7 +54,7 @@ exports.saveImage = async (prompt, imageData, format, duration = 0, isEdit = fal
           format: format,
           created_at: timestamp,
           duration_seconds: duration,
-          is_edit: isEdit,
+          is_edit: isEditBoolean,
           source_type: sourceType
         }
       ])
