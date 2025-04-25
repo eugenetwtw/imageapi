@@ -206,9 +206,10 @@
                         // Photo cell (Generated Image Thumbnail)
                         const photoCell = document.createElement('td');
                         const photoThumbnail = document.createElement('img');
-                        photoThumbnail.src = `data:image/${item.format};base64,${item.image_data}`;
+                        photoThumbnail.dataset.src = `data:image/${item.format};base64,${item.image_data}`;
                         photoThumbnail.alt = item.prompt;
-                        photoThumbnail.className = 'thumbnail';
+                        photoThumbnail.className = 'thumbnail lazy-load';
+                        photoThumbnail.loading = 'lazy'; // Native lazy loading
                         photoCell.appendChild(photoThumbnail);
                         
                         // Duration cell
@@ -268,9 +269,39 @@
             document.getElementById('image-modal').style.display = 'none';
         }
         
+        // Lazy load images using Intersection Observer as fallback for browsers without native lazy loading
+        function setupLazyLoading() {
+            // Check if browser supports native lazy loading
+            if ('loading' in HTMLImageElement.prototype) {
+                // Browser supports native lazy loading, no need for Intersection Observer
+                return;
+            }
+            
+            // Fallback to Intersection Observer for older browsers
+            const images = document.querySelectorAll('img.lazy-load');
+            const observer = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const img = entry.target;
+                        img.src = img.dataset.src;
+                        img.removeAttribute('data-src');
+                        observer.unobserve(img);
+                    }
+                });
+            }, {
+                rootMargin: '0px 0px 100px 0px', // Load images slightly before they enter viewport
+                threshold: 0.1
+            });
+            
+            images.forEach(img => observer.observe(img));
+        }
+        
         // Load history when page loads
         document.addEventListener('DOMContentLoaded', () => {
             loadHistory();
+            
+            // Setup lazy loading after history is loaded
+            setTimeout(setupLazyLoading, 100); // Small delay to ensure images are rendered
             
             // Add event listener for refresh button
             document.getElementById('refresh-btn').addEventListener('click', () => {
@@ -301,11 +332,15 @@
                     console.log('Refreshed data:', data);
                     // Reload history with fresh data
                     loadHistory();
+                    // Setup lazy loading again after refresh
+                    setTimeout(setupLazyLoading, 100);
                 })
                 .catch(error => {
                     console.error('Error refreshing data:', error);
                     // Try regular load as fallback
                     loadHistory();
+                    // Setup lazy loading again after refresh
+                    setTimeout(setupLazyLoading, 100);
                 });
             });
         });
