@@ -254,40 +254,63 @@ async function generateImage() {
 // Create image using API
 async function createImage(prompt, size, quality, format, compression, transparent) {
     try {
-        const response = await fetch('/api/images/generate', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                prompt,
-                size,
-                quality,
-                format,
-                compression,
-                transparent
-            })
-        });
+        // Set a longer timeout for the fetch request
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
         
-        if (!response.ok) {
-            let errorMessage = 'Failed to generate image';
-            try {
-                const errorData = await response.json();
-                errorMessage = errorData.message || errorMessage;
-            } catch (parseError) {
-                // If the response is not valid JSON, try to get the text
-                try {
-                    const errorText = await response.text();
-                    errorMessage = errorText || errorMessage;
-                } catch (textError) {
-                    console.error('Error parsing error response:', textError);
+        try {
+            const response = await fetch('/api/images/generate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    prompt,
+                    size,
+                    quality,
+                    format,
+                    compression,
+                    transparent
+                }),
+                signal: controller.signal
+            });
+            
+            // Clear the timeout
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) {
+                // Handle specific status codes
+                if (response.status === 504) {
+                    throw new Error('Server timeout. The image generation process is taking too long. Please try with a simpler prompt.');
                 }
+                
+                let errorMessage = 'Failed to generate image';
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.message || errorMessage;
+                } catch (parseError) {
+                    // If the response is not valid JSON, try to get the text
+                    try {
+                        const errorText = await response.text();
+                        errorMessage = errorText || errorMessage;
+                    } catch (textError) {
+                        console.error('Error parsing error response:', textError);
+                    }
+                }
+                throw new Error(errorMessage);
             }
-            throw new Error(errorMessage);
+            
+            const data = await response.json();
+            return data.data;
+        } catch (fetchError) {
+            // Handle abort error
+            if (fetchError.name === 'AbortError') {
+                throw new Error('Request timed out. The image generation process is taking too long. Please try with a simpler prompt.');
+            }
+            throw fetchError;
+        } finally {
+            clearTimeout(timeoutId);
         }
-        
-        const data = await response.json();
-        return data.data;
     } catch (error) {
         console.error('Error in createImage:', error);
         throw error;
@@ -312,30 +335,53 @@ async function editImage(prompt, files, size, quality, format, compression, tran
             formData.append('images', file);
         });
         
-        const response = await fetch('/api/images/edit', {
-            method: 'POST',
-            body: formData
-        });
+        // Set a longer timeout for the fetch request
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
         
-        if (!response.ok) {
-            let errorMessage = 'Failed to edit image';
-            try {
-                const errorData = await response.json();
-                errorMessage = errorData.message || errorMessage;
-            } catch (parseError) {
-                // If the response is not valid JSON, try to get the text
-                try {
-                    const errorText = await response.text();
-                    errorMessage = errorText || errorMessage;
-                } catch (textError) {
-                    console.error('Error parsing error response:', textError);
+        try {
+            const response = await fetch('/api/images/edit', {
+                method: 'POST',
+                body: formData,
+                signal: controller.signal
+            });
+            
+            // Clear the timeout
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) {
+                // Handle specific status codes
+                if (response.status === 504) {
+                    throw new Error('Server timeout. The image editing process is taking too long. Please try with a smaller image or a simpler edit request.');
                 }
+                
+                let errorMessage = 'Failed to edit image';
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.message || errorMessage;
+                } catch (parseError) {
+                    // If the response is not valid JSON, try to get the text
+                    try {
+                        const errorText = await response.text();
+                        errorMessage = errorText || errorMessage;
+                    } catch (textError) {
+                        console.error('Error parsing error response:', textError);
+                    }
+                }
+                throw new Error(errorMessage);
             }
-            throw new Error(errorMessage);
+            
+            const data = await response.json();
+            return data.data;
+        } catch (fetchError) {
+            // Handle abort error
+            if (fetchError.name === 'AbortError') {
+                throw new Error('Request timed out. The image editing process is taking too long. Please try with a smaller image or a simpler edit request.');
+            }
+            throw fetchError;
+        } finally {
+            clearTimeout(timeoutId);
         }
-        
-        const data = await response.json();
-        return data.data;
     } catch (error) {
         console.error('Error in editImage:', error);
         throw error;
