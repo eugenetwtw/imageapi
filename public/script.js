@@ -1,6 +1,7 @@
 // Global variables
 let selectedFiles = [];
 let generatedImage = null;
+let generatedImages = []; // Array to store multiple generated images
 let lastGenerationDuration = 0;
 let isEditOperation = false;
 
@@ -261,30 +262,23 @@ async function generateImage() {
         
         // If files are selected, use image edit endpoint and process images one by one
         if (isEditOperation) {
-            // Process each image individually to avoid payload too large errors
-            const results = [];
+            // Process each image individually to avoid payload too large errors and display results incrementally
+            generatedImages = []; // Reset generatedImages array for multiple saves
+            generatedImage = null; // Reset generatedImage for download/save of first image
             for (let i = 0; i < selectedFiles.length; i++) {
                 const file = selectedFiles[i];
                 loadingText.textContent = `Processing image ${i + 1} of ${selectedFiles.length}...`;
                 result = await editImage(prompt, [file], size, quality, format, compression, transparent);
                 if (result && result.data) {
-                    results.push({
+                    const res = {
                         data: result.data.b64_json || result.data.url,
                         format: format,
                         prompt: prompt,
                         isUrl: !!result.data.url
-                    });
-                } else {
-                    showError(`Failed to process image ${i + 1}. Continuing with remaining images.`);
-                }
-            }
-            
-            // Display results (show only the first one for simplicity, or create a gallery if needed)
-            if (results.length > 0) {
-                generatedImage = results[0]; // Store the first result for download/save
-                
-                // Display all results or just the first one
-                results.forEach((res, index) => {
+                    };
+                    generatedImages.push(res);
+                    
+                    // Display the result immediately
                     const img = document.createElement('img');
                     if (res.isUrl) {
                         img.src = res.data;
@@ -297,8 +291,8 @@ async function generateImage() {
                             ctx.drawImage(img, 0, 0);
                             const dataURL = canvas.toDataURL(`image/${format}`);
                             const base64Data = dataURL.split(',')[1];
-                            results[index].data = base64Data;
-                            if (index === 0) {
+                            generatedImages[i].data = base64Data;
+                            if (i === 0) {
                                 generatedImage.data = base64Data;
                             }
                         };
@@ -308,8 +302,17 @@ async function generateImage() {
                     img.alt = prompt;
                     img.style.margin = '5px';
                     resultContainer.appendChild(img);
-                });
-                
+                    
+                    // Set the first image as the one for download/save
+                    if (i === 0) {
+                        generatedImage = res;
+                    }
+                } else {
+                    showError(`Failed to process image ${i + 1}. Continuing with remaining images.`);
+                }
+            }
+            
+            if (generatedImages.length > 0) {
                 downloadBtn.classList.remove('hidden');
                 saveBtn.classList.remove('hidden');
             } else {
@@ -469,36 +472,65 @@ function downloadImage() {
 
 // Save image to gallery
 async function saveToGallery() {
-    if (!generatedImage) return;
+    if (!generatedImage && generatedImages.length === 0) return;
     
     try {
-        const response = await fetch('/api/gallery', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                prompt: generatedImage.prompt,
-                imageData: generatedImage.data,
-                format: generatedImage.format,
-                duration: lastGenerationDuration,
-                isEdit: isEditOperation === true,
-                sourceType: isEditOperation ? 'edit' : 'text'
-            })
-        });
-        
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Failed to save image to gallery');
+        // If there are multiple images, save each one
+        if (generatedImages.length > 0) {
+            for (let i = 0; i < generatedImages.length; i++) {
+                const img = generatedImages[i];
+                const response = await fetch('/api/gallery', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        prompt: img.prompt,
+                        imageData: img.data,
+                        format: img.format,
+                        duration: lastGenerationDuration,
+                        isEdit: isEditOperation === true,
+                        sourceType: isEditOperation ? 'edit' : 'text'
+                    })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    showError(`Failed to save image ${i + 1} to gallery. Continuing with others.`);
+                } else {
+                    showSuccess(`Image ${i + 1} saved to gallery successfully!`);
+                }
+            }
+        } else {
+            // Single image case
+            const response = await fetch('/api/gallery', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    prompt: generatedImage.prompt,
+                    imageData: generatedImage.data,
+                    format: generatedImage.format,
+                    duration: lastGenerationDuration,
+                    isEdit: isEditOperation === true,
+                    sourceType: isEditOperation ? 'edit' : 'text'
+                })
+            });
+            
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || 'Failed to save image to gallery');
+            }
+            
+            showSuccess('Image saved to gallery successfully!');
         }
-        
-        showSuccess('Image saved to gallery successfully!');
         
         // Reload gallery
         loadGallery();
     } catch (error) {
         console.error('Error saving to gallery:', error);
-        showError('Failed to save image to gallery. Please try again.');
+        showError('Failed to save image(s) to gallery. Please try again.');
     }
 }
 
