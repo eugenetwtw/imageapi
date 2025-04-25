@@ -119,12 +119,14 @@
     </footer>
     
     <script>
-        // Fetch gallery images
+        // Fetch all gallery images without pagination
         async function loadHistory() {
             try {
-                // Add cache-busting parameter to prevent caching
+                // Add cache-busting parameter
                 const timestamp = new Date().getTime();
+                console.time('API Fetch Time');
                 const response = await fetch(`/api/gallery?_=${timestamp}`);
+                console.timeEnd('API Fetch Time');
                 
                 if (!response.ok) {
                     throw new Error('Failed to load history');
@@ -151,6 +153,9 @@
                 // Create history content
                 const historyContent = document.getElementById('history-content');
                 historyContent.innerHTML = '';
+                
+                // Add pagination controls at the top
+                historyContent.appendChild(createPaginationControls());
                 
                 // Process each date group
                 Object.keys(groupedImages).sort().reverse().forEach(date => {
@@ -246,10 +251,18 @@
                     historyContent.appendChild(dateGroup);
                 });
                 
+                // Add pagination controls at the bottom
+                historyContent.appendChild(createPaginationControls());
+                
             } catch (error) {
                 console.error('Error loading history:', error);
                 document.getElementById('history-content').innerHTML = `<div class="error">Failed to load history. Please try again.</div>`;
             }
+        }
+        
+        function createPaginationControls() {
+            // No pagination controls needed since we're loading all records
+            return document.createElement('div');
         }
         
         // Open image modal
@@ -282,31 +295,8 @@
                     </div>
                 `;
                 
-                // Force browser cache refresh
-                fetch('/api/gallery', { 
-                    method: 'GET',
-                    headers: {
-                        'Cache-Control': 'no-cache, no-store, must-revalidate',
-                        'Pragma': 'no-cache',
-                        'Expires': '0'
-                    }
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Failed to refresh data');
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    console.log('Refreshed data:', data);
-                    // Reload history with fresh data
-                    loadHistory();
-                })
-                .catch(error => {
-                    console.error('Error refreshing data:', error);
-                    // Try regular load as fallback
-                    loadHistory();
-                });
+                // Reload history
+                loadHistory();
             });
         });
     </script>

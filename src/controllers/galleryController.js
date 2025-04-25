@@ -9,12 +9,19 @@ const supabaseService = require('../services/supabaseService');
  */
 exports.getAllImages = async (req, res, next) => {
   try {
-    const images = await supabaseService.getAllImages();
+    // If limit is provided, use it; otherwise, set to null to fetch all records
+    const limit = req.query.limit ? parseInt(req.query.limit, 10) : null;
+    const offset = parseInt(req.query.offset, 10) || 0;
+    const fetchTotal = req.query.fetchTotal === 'true';
+    
+    console.log('Requesting images with limit:', limit, 'offset:', offset, 'fetchTotal:', fetchTotal);
+    const result = await supabaseService.getAllImages(limit, offset, fetchTotal);
     
     res.status(200).json({
       status: 'success',
-      results: images.length,
-      data: images
+      results: result.data.length,
+      total: result.total,
+      data: result.data
     });
   } catch (error) {
     console.error('Error fetching gallery images:', error);

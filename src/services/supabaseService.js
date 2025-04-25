@@ -11,20 +11,49 @@ const TABLE_NAME = 'imageapi';
 
 /**
  * Get all images from the gallery
- * @returns {Array} Array of gallery images
+ * @param {number} limit - Number of items to fetch (optional, if not provided, fetch all)
+ * @param {number} offset - Offset for pagination (optional)
+ * @param {boolean} fetchTotal - Whether to fetch the total count (can be skipped for performance)
+ * @returns {Object} Object containing array of gallery images and total count (if fetched)
  */
-exports.getAllImages = async () => {
+exports.getAllImages = async (limit = null, offset = 0, fetchTotal = false) => {
   try {
-    console.log('Fetching all images from Supabase table:', TABLE_NAME);
+    console.log('Fetching images from Supabase table:', TABLE_NAME, 'with limit:', limit, 'and offset:', offset, 'fetchTotal:', fetchTotal);
+    console.time('Supabase Fetch Data Time');
     
-    const { data, error } = await supabase
+    let query = supabase
       .from(TABLE_NAME)
       .select('*')
       .order('created_at', { ascending: false });
+    
+    // Apply pagination only if limit is provided
+    if (limit !== null) {
+      query = query.range(offset, offset + limit - 1);
+    }
 
+    const { data, error } = await query;
+
+    console.timeEnd('Supabase Fetch Data Time');
+    
     if (error) throw error;
 
-    console.log(`Retrieved ${data ? data.length : 0} images from Supabase`);
+    let count = 0;
+    if (fetchTotal) {
+      console.time('Supabase Fetch Count Time');
+      // Fetch total count for pagination
+      const { count: totalCount, error: countError } = await supabase
+        .from(TABLE_NAME)
+        .select('*', { count: 'exact' });
+      
+      console.timeEnd('Supabase Fetch Count Time');
+      
+      if (countError) throw countError;
+      count = totalCount || 0;
+    } else {
+      console.log('Skipping total count fetch for performance');
+    }
+
+    console.log(`Retrieved ${data ? data.length : 0} images from Supabase, total count: ${count}`);
     
     // Log the first few images for debugging
     if (data && data.length > 0) {
@@ -37,7 +66,7 @@ exports.getAllImages = async () => {
       });
     }
 
-    return data || [];
+    return { data: data || [], total: count };
   } catch (error) {
     console.error('Supabase error fetching images:', error);
     throw new Error(error.message || 'Failed to fetch gallery images');

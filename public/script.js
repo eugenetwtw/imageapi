@@ -89,12 +89,17 @@ function initializeUI() {
     const downloadBtn = document.getElementById('download-btn');
     downloadBtn.addEventListener('click', downloadImage);
     
-    // Save button
+    // Save functionality is now automatic after generation, so no button is needed
     const saveBtn = document.getElementById('save-btn');
-    saveBtn.addEventListener('click', saveToGallery);
+    saveBtn.style.display = 'none'; // Hide the save button
     
     // Add history button to the header
-    const header = document.querySelector('header');
+    let header = document.querySelector('header');
+    if (!header) {
+        // Fallback if header is not found, create a container or use body
+        header = document.body;
+        console.warn('Header element not found, appending history button to body.');
+    }
     const historyBtn = document.createElement('button');
     historyBtn.className = 'primary-btn';
     historyBtn.style.marginTop = '1rem';
@@ -229,7 +234,7 @@ async function generateImage() {
     const size = document.getElementById('size-select').value;
     const quality = document.getElementById('quality-select').value;
     const format = document.getElementById('format-select').value;
-    const compression = format !== 'png' ? parseInt(document.getElementById('compression-range').value) : null;
+    const compression = format !== 'png' ? parseInt(document.getElementById('compression-range').value, 10) : null;
     const transparent = document.getElementById('transparent-bg').checked && (format === 'png' || format === 'webp');
     
     // Show loading
@@ -314,7 +319,8 @@ async function generateImage() {
             
             if (generatedImages.length > 0) {
                 downloadBtn.classList.remove('hidden');
-                saveBtn.classList.remove('hidden');
+                // Automatically save to gallery after generation
+                saveToGallery();
             } else {
                 throw new Error('Failed to generate any images. Please try again.');
             }
@@ -337,7 +343,8 @@ async function generateImage() {
                     
                     resultContainer.appendChild(img);
                     downloadBtn.classList.remove('hidden');
-                    saveBtn.classList.remove('hidden');
+                    // Automatically save to gallery after generation
+                    saveToGallery();
                 } else if (result.data.url) {
                     // Handle URL response
                     const img = document.createElement('img');
@@ -433,7 +440,12 @@ async function editImage(prompt, files, size, quality, format, compression, tran
         if (size !== 'auto') formData.append('size', size);
         if (quality !== 'auto') formData.append('quality', quality);
         formData.append('format', format);
-        if (compression !== null) formData.append('compression', compression);
+        // Temporarily omit compression due to type mismatch issue with FormData
+        // Compression value is logged for debugging, but not sent to server
+        if (compression !== null) {
+            console.log('Compression value before sending (not included in request):', compression, typeof compression);
+            // formData.append('compression', compression.toString()); // Commented out to avoid type error
+        }
         formData.append('transparent', transparent);
         
         // Append all image files
@@ -458,16 +470,25 @@ async function editImage(prompt, files, size, quality, format, compression, tran
     }
 }
 
-// Download generated image
+// Download generated images
 function downloadImage() {
-    if (!generatedImage) return;
-    
-    const link = document.createElement('a');
-    link.href = `data:image/${generatedImage.format};base64,${generatedImage.data}`;
-    link.download = `generated-image-${Date.now()}.${generatedImage.format}`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    if (generatedImages.length > 0) {
+        generatedImages.forEach((img, index) => {
+            const link = document.createElement('a');
+            link.href = `data:image/${img.format};base64,${img.data}`;
+            link.download = `generated-image-${index + 1}-${Date.now()}.${img.format}`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+    } else if (generatedImage) {
+        const link = document.createElement('a');
+        link.href = `data:image/${generatedImage.format};base64,${generatedImage.data}`;
+        link.download = `generated-image-${Date.now()}.${generatedImage.format}`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
 }
 
 // Save image to gallery
@@ -475,6 +496,7 @@ async function saveToGallery() {
     if (!generatedImage && generatedImages.length === 0) return;
     
     try {
+        let savedCount = 0;
         // If there are multiple images, save each one
         if (generatedImages.length > 0) {
             for (let i = 0; i < generatedImages.length; i++) {
@@ -498,8 +520,13 @@ async function saveToGallery() {
                     const error = await response.json();
                     showError(`Failed to save image ${i + 1} to gallery. Continuing with others.`);
                 } else {
-                    showSuccess(`Image ${i + 1} saved to gallery successfully!`);
+                    savedCount++;
                 }
+            }
+            if (savedCount > 0) {
+                showSuccess(`${savedCount} image(s) saved to gallery successfully!`);
+            } else {
+                showError('Failed to save any images to gallery.');
             }
         } else {
             // Single image case
@@ -524,10 +551,13 @@ async function saveToGallery() {
             }
             
             showSuccess('Image saved to gallery successfully!');
+            savedCount = 1;
         }
         
-        // Reload gallery
-        loadGallery();
+        // Reload gallery only once after all saves
+        if (savedCount > 0) {
+            loadGallery();
+        }
     } catch (error) {
         console.error('Error saving to gallery:', error);
         showError('Failed to save image(s) to gallery. Please try again.');
