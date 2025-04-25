@@ -33,11 +33,16 @@ function initializeUI() {
         dropArea.addEventListener(eventName, unhighlight, false);
     });
     
-    // Handle dropped files
+// Handle dropped files
     dropArea.addEventListener('drop', handleDrop, false);
     
     // Handle selected files
     fileInput.addEventListener('change', handleFiles, false);
+    
+    // Trigger file input on drop area click
+    dropArea.addEventListener('click', () => {
+        fileInput.click();
+    }, false);
     
     // Compression range
     const compressionRange = document.getElementById('compression-range');
