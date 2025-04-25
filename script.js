@@ -1,6 +1,7 @@
 // Global variables
 let selectedFiles = [];
 let generatedImage = null;
+let lastGenerationDuration = 0;
 
 // DOM Elements
 document.addEventListener('DOMContentLoaded', () => {
@@ -215,6 +216,9 @@ async function generateImage() {
     resultContainer.innerHTML = '';
     downloadBtn.classList.add('hidden');
     
+    // Start timer for generation duration
+    const startTime = new Date().getTime();
+    
     try {
         let result;
         
@@ -240,6 +244,9 @@ async function generateImage() {
             
             resultContainer.appendChild(img);
             downloadBtn.classList.remove('hidden');
+            
+            // Automatically save to Supabase
+            await saveToSupabase(generatedImage, selectedFiles.length > 0);
         } else {
             throw new Error('Failed to generate image. Please try again.');
         }
@@ -247,6 +254,16 @@ async function generateImage() {
         console.error('Error generating image:', error);
         resultContainer.innerHTML = `<div class="error">${error.message || 'Failed to generate image. Please try again.'}</div>`;
     } finally {
+        // Calculate generation duration
+        const endTime = new Date().getTime();
+        lastGenerationDuration = Math.floor((endTime - startTime) / 1000);
+        
+        // Create time display element
+        const timeDisplay = document.createElement('div');
+        timeDisplay.className = 'success';
+        timeDisplay.textContent = `Image generated in ${lastGenerationDuration} seconds`;
+        resultContainer.insertAdjacentElement('beforebegin', timeDisplay);
+        
         loading.classList.add('hidden');
     }
 }
@@ -436,4 +453,43 @@ function showSuccess(message) {
     setTimeout(() => {
         successDiv.remove();
     }, 5000);
+}
+
+// Save image to Supabase
+async function saveToSupabase(image, isEdit = false) {
+    if (!image) return;
+    
+    try {
+        // Check if Supabase is initialized
+        if (!window.supabase) {
+            console.error('Database connection not initialized');
+            return;
+        }
+        
+        // Save to gallery API endpoint
+        const response = await fetch('/api/gallery', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                prompt: image.prompt,
+                imageData: image.data,
+                format: image.format,
+                duration: lastGenerationDuration || 0,
+                isEdit: isEdit,
+                sourceType: isEdit ? 'edit' : 'text'
+            })
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            console.error('Error saving to gallery:', error);
+            return;
+        }
+        
+        console.log('Image saved to gallery successfully');
+    } catch (error) {
+        console.error('Error saving to gallery:', error);
+    }
 }
