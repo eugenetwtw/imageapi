@@ -259,63 +259,116 @@ async function generateImage() {
     try {
         let result;
         
-        // If files are selected, use image edit endpoint
+        // If files are selected, use image edit endpoint and process images one by one
         if (isEditOperation) {
-            result = await editImage(prompt, selectedFiles, size, quality, format, compression, transparent);
+            // Process each image individually to avoid payload too large errors
+            const results = [];
+            for (let i = 0; i < selectedFiles.length; i++) {
+                const file = selectedFiles[i];
+                loadingText.textContent = `Processing image ${i + 1} of ${selectedFiles.length}...`;
+                result = await editImage(prompt, [file], size, quality, format, compression, transparent);
+                if (result && result.data) {
+                    results.push({
+                        data: result.data.b64_json || result.data.url,
+                        format: format,
+                        prompt: prompt,
+                        isUrl: !!result.data.url
+                    });
+                } else {
+                    showError(`Failed to process image ${i + 1}. Continuing with remaining images.`);
+                }
+            }
+            
+            // Display results (show only the first one for simplicity, or create a gallery if needed)
+            if (results.length > 0) {
+                generatedImage = results[0]; // Store the first result for download/save
+                
+                // Display all results or just the first one
+                results.forEach((res, index) => {
+                    const img = document.createElement('img');
+                    if (res.isUrl) {
+                        img.src = res.data;
+                        img.crossOrigin = "anonymous";
+                        img.onload = function() {
+                            const canvas = document.createElement('canvas');
+                            canvas.width = img.width;
+                            canvas.height = img.height;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0);
+                            const dataURL = canvas.toDataURL(`image/${format}`);
+                            const base64Data = dataURL.split(',')[1];
+                            results[index].data = base64Data;
+                            if (index === 0) {
+                                generatedImage.data = base64Data;
+                            }
+                        };
+                    } else {
+                        img.src = `data:image/${format};base64,${res.data}`;
+                    }
+                    img.alt = prompt;
+                    img.style.margin = '5px';
+                    resultContainer.appendChild(img);
+                });
+                
+                downloadBtn.classList.remove('hidden');
+                saveBtn.classList.remove('hidden');
+            } else {
+                throw new Error('Failed to generate any images. Please try again.');
+            }
         } else {
             // Otherwise use image generation endpoint
             result = await createImage(prompt, size, quality, format, compression, transparent);
-        }
-        
-        // Display the result
-        if (result && result.data) {
-            if (result.data.b64_json) {
-                generatedImage = {
-                    data: result.data.b64_json,
-                    format: format,
-                    prompt: prompt
-                };
-                
-                const img = document.createElement('img');
-                img.src = `data:image/${format};base64,${result.data.b64_json}`;
-                img.alt = prompt;
-                
-                resultContainer.appendChild(img);
-                downloadBtn.classList.remove('hidden');
-                saveBtn.classList.remove('hidden');
-            } else if (result.data.url) {
-                // Handle URL response
-                const img = document.createElement('img');
-                img.src = result.data.url;
-                img.alt = prompt;
-                img.crossOrigin = "anonymous";
-                
-                // Convert image URL to base64 when loaded
-                img.onload = function() {
-                    const canvas = document.createElement('canvas');
-                    canvas.width = img.width;
-                    canvas.height = img.height;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0);
-                    const dataURL = canvas.toDataURL(`image/${format}`);
-                    const base64Data = dataURL.split(',')[1];
-                    
+            
+            // Display the result
+            if (result && result.data) {
+                if (result.data.b64_json) {
                     generatedImage = {
-                        data: base64Data,
+                        data: result.data.b64_json,
                         format: format,
                         prompt: prompt
                     };
                     
+                    const img = document.createElement('img');
+                    img.src = `data:image/${format};base64,${result.data.b64_json}`;
+                    img.alt = prompt;
+                    
+                    resultContainer.appendChild(img);
                     downloadBtn.classList.remove('hidden');
                     saveBtn.classList.remove('hidden');
-                };
-                
-                resultContainer.appendChild(img);
+                } else if (result.data.url) {
+                    // Handle URL response
+                    const img = document.createElement('img');
+                    img.src = result.data.url;
+                    img.alt = prompt;
+                    img.crossOrigin = "anonymous";
+                    
+                    // Convert image URL to base64 when loaded
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0);
+                        const dataURL = canvas.toDataURL(`image/${format}`);
+                        const base64Data = dataURL.split(',')[1];
+                        
+                        generatedImage = {
+                            data: base64Data,
+                            format: format,
+                            prompt: prompt
+                        };
+                        
+                        downloadBtn.classList.remove('hidden');
+                        saveBtn.classList.remove('hidden');
+                    };
+                    
+                    resultContainer.appendChild(img);
+                } else {
+                    throw new Error('Failed to generate image. Please try again.');
+                }
             } else {
                 throw new Error('Failed to generate image. Please try again.');
             }
-        } else {
-            throw new Error('Failed to generate image. Please try again.');
         }
     } catch (error) {
         console.error('Error generating image:', error);
