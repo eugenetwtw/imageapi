@@ -119,13 +119,29 @@
     </footer>
     
     <script>
-        // Fetch all gallery images without any limit
-        async function loadHistory() {
+        // Current pagination state
+        let currentPage = 1;
+        const itemsPerPage = 20;
+        let totalItems = 0;
+
+        // Fetch gallery images with pagination
+        async function loadHistory(page = 1) {
             try {
-                // Add cache-busting parameter, no limit to fetch all records
+                currentPage = page;
+                const offset = (page - 1) * itemsPerPage;
+                
+                // Show loading spinner
+                document.getElementById('history-content').innerHTML = `
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Loading history...</p>
+                    </div>
+                `;
+
+                // Add pagination parameters
                 const timestamp = new Date().getTime();
                 console.time('API Fetch Time');
-                const response = await fetch(`/api/gallery?_=${timestamp}`);
+                const response = await fetch(`/api/gallery?_=${timestamp}&limit=${itemsPerPage}&offset=${offset}&fetchTotal=true`);
                 console.timeEnd('API Fetch Time');
                 
                 if (!response.ok) {
@@ -136,11 +152,15 @@
                 
                 const data = await response.json();
                 const images = data.data || [];
+                totalItems = data.total || 0;
                 
                 if (images.length === 0) {
                     document.getElementById('history-content').innerHTML = '<p>No history available yet.</p>';
                     return;
                 }
+
+                // Update pagination controls
+                updatePaginationControls();
                 
                 // Group images by date
                 const groupedImages = {};
@@ -263,8 +283,36 @@
         }
         
         function createPaginationControls() {
-            // No pagination controls needed since we're loading all records
-            return document.createElement('div');
+            const paginationDiv = document.createElement('div');
+            paginationDiv.className = 'pagination';
+            
+            const prevBtn = document.createElement('button');
+            prevBtn.textContent = 'Previous';
+            prevBtn.disabled = currentPage === 1;
+            prevBtn.onclick = () => loadHistory(currentPage - 1);
+            
+            const nextBtn = document.createElement('button');
+            nextBtn.textContent = 'Next';
+            nextBtn.disabled = currentPage * itemsPerPage >= totalItems;
+            nextBtn.onclick = () => loadHistory(currentPage + 1);
+            
+            const pageInfo = document.createElement('span');
+            pageInfo.textContent = `Page ${currentPage} of ${Math.ceil(totalItems / itemsPerPage)}`;
+            
+            paginationDiv.appendChild(prevBtn);
+            paginationDiv.appendChild(pageInfo);
+            paginationDiv.appendChild(nextBtn);
+            
+            return paginationDiv;
+        }
+
+        function updatePaginationControls() {
+            const existingControls = document.querySelectorAll('.pagination');
+            existingControls.forEach(control => control.remove());
+            
+            const newControls = createPaginationControls();
+            document.getElementById('history-content').prepend(newControls);
+            document.getElementById('history-content').appendChild(newControls.cloneNode(true));
         }
         
         // Open image modal
@@ -285,20 +333,12 @@
         
         // Load history when page loads
         document.addEventListener('DOMContentLoaded', () => {
-            loadHistory();
+            loadHistory(1);
             
             // Add event listener for refresh button
             document.getElementById('refresh-btn').addEventListener('click', () => {
-                // Show loading spinner
-                document.getElementById('history-content').innerHTML = `
-                    <div class="loading">
-                        <div class="spinner"></div>
-                        <p>Loading history...</p>
-                    </div>
-                `;
-                
-                // Reload history
-                loadHistory();
+                // Reload first page
+                loadHistory(1);
             });
         });
     </script>
