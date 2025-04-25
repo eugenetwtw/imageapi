@@ -2,15 +2,15 @@ const { createError } = require('../utils/errorUtils');
 const supabaseService = require('../services/supabaseService');
 
 /**
- * Get all images from the gallery
+ * Get images from the gallery with pagination
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  * @param {Function} next - Express next middleware function
  */
 exports.getAllImages = async (req, res, next) => {
   try {
-    // If limit is provided, use it; otherwise, set to null to fetch all records
-    const limit = req.query.limit ? parseInt(req.query.limit, 10) : null;
+    // Set a reasonable default limit to avoid timeouts
+    const limit = req.query.limit ? parseInt(req.query.limit, 10) : 20;
     const offset = parseInt(req.query.offset, 10) || 0;
     const fetchTotal = req.query.fetchTotal === 'true';
     
@@ -24,7 +24,7 @@ exports.getAllImages = async (req, res, next) => {
       data: result.data
     });
   } catch (error) {
-    console.error('Error fetching gallery images:', error);
+    console.error('Error fetching gallery images:', error.message, error.stack);
     next(createError(500, error.message || 'Failed to fetch gallery images'));
   }
 };
