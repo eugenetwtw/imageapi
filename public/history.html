@@ -123,6 +123,7 @@
         let currentPage = 1;
         const itemsPerPage = 20;
         let totalItems = 0;
+        let hasMorePages = false; // Flag to indicate if there are more pages
 
         // Fetch gallery images with pagination
         async function loadHistory(page = 1) {
@@ -141,7 +142,10 @@
                 // Add pagination parameters
                 const timestamp = new Date().getTime();
                 console.time('API Fetch Time');
-                const response = await fetch(`/api/gallery?_=${timestamp}&limit=${itemsPerPage}&offset=${offset}&fetchTotal=true`);
+                // Use a smaller limit for the initial request to improve performance
+                // Only fetch the total count on the first page to reduce database load
+                const shouldFetchTotal = page === 1;
+                const response = await fetch(`/api/gallery?_=${timestamp}&limit=${itemsPerPage}&offset=${offset}&fetchTotal=${shouldFetchTotal}`);
                 console.timeEnd('API Fetch Time');
                 
                 if (!response.ok) {
@@ -153,6 +157,9 @@
                 const data = await response.json();
                 const images = data.data || [];
                 totalItems = data.total || 0;
+                
+                // Check if there might be more pages
+                hasMorePages = images.length === itemsPerPage;
                 
                 if (images.length === 0) {
                     document.getElementById('history-content').innerHTML = '<p>No history available yet.</p>';
@@ -278,7 +285,25 @@
                 
             } catch (error) {
                 console.error('Error loading history:', error);
-                document.getElementById('history-content').innerHTML = `<div class="error">Failed to load history. Please try again.</div>`;
+                
+                // Create a more user-friendly error message with retry button
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'error';
+                
+                const errorMessage = document.createElement('p');
+                errorMessage.textContent = 'Failed to load history. This might be due to a temporary server issue.';
+                
+                const retryButton = document.createElement('button');
+                retryButton.className = 'primary-btn';
+                retryButton.textContent = 'Try Again';
+                retryButton.style.marginTop = '1rem';
+                retryButton.onclick = () => loadHistory(currentPage);
+                
+                errorDiv.appendChild(errorMessage);
+                errorDiv.appendChild(retryButton);
+                
+                document.getElementById('history-content').innerHTML = '';
+                document.getElementById('history-content').appendChild(errorDiv);
             }
         }
         
@@ -293,11 +318,16 @@
             
             const nextBtn = document.createElement('button');
             nextBtn.textContent = 'Next';
-            nextBtn.disabled = currentPage * itemsPerPage >= totalItems;
+            // Enable next button if we have more pages or if current page doesn't reach total
+            nextBtn.disabled = !hasMorePages && (currentPage * itemsPerPage >= totalItems);
             nextBtn.onclick = () => loadHistory(currentPage + 1);
             
             const pageInfo = document.createElement('span');
-            pageInfo.textContent = `Page ${currentPage} of ${Math.ceil(totalItems / itemsPerPage)}`;
+            // If we have hasMorePages but current page * itemsPerPage >= totalItems,
+            // it means the total count is likely an estimate
+            const isEstimate = hasMorePages && (currentPage * itemsPerPage >= totalItems);
+            const totalPages = Math.ceil(totalItems / itemsPerPage);
+            pageInfo.textContent = `Page ${currentPage} of ${totalPages}${isEstimate ? '+' : ''}`;
             
             paginationDiv.appendChild(prevBtn);
             paginationDiv.appendChild(pageInfo);

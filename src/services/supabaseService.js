@@ -9,6 +9,14 @@ const supabase = createClient(
 // Table name
 const TABLE_NAME = 'imageapi';
 
+// Simple cache for count results to avoid repeated expensive count queries
+const countCache = {
+  value: null,
+  timestamp: 0,
+  // Cache expires after 5 minutes
+  TTL: 5 * 60 * 1000
+};
+
 /**
  * Get all images from the gallery
  * @param {number} limit - Number of items to fetch (optional, if not provided, fetch all)
@@ -39,18 +47,43 @@ exports.getAllImages = async (limit = null, offset = 0, fetchTotal = false) => {
 
     let count = 0;
     if (fetchTotal) {
-      console.time('Supabase Fetch Count Time');
-      // Fetch total count for pagination
-      const { count: totalCount, error: countError } = await supabase
-        .from(TABLE_NAME)
-        .select('*', { count: 'exact' });
-      
-      console.timeEnd('Supabase Fetch Count Time');
-      
-      if (countError) throw countError;
-      count = totalCount || 0;
+      // Check if we have a valid cached count
+      const now = Date.now();
+      if (countCache.value !== null && (now - countCache.timestamp) < countCache.TTL) {
+        console.log('Using cached count value:', countCache.value);
+        count = countCache.value;
+      } else {
+        console.time('Supabase Fetch Count Time');
+        try {
+          // Use a more efficient count query
+          // Instead of selecting all columns, just select the id which is more efficient
+          const { count: totalCount, error: countError } = await supabase
+            .from(TABLE_NAME)
+            .select('id', { count: 'exact', head: true });
+          
+          console.timeEnd('Supabase Fetch Count Time');
+          
+          if (countError) {
+            console.warn('Count query error, using estimate instead:', countError);
+            // If count query fails, use an estimate based on the current page
+            count = offset + data.length + (data.length === limit ? limit : 0);
+          } else {
+            count = totalCount || 0;
+            // Update the cache
+            countCache.value = count;
+            countCache.timestamp = now;
+            console.log('Updated count cache with value:', count);
+          }
+        } catch (countError) {
+          console.warn('Count query exception, using estimate instead:', countError);
+          // If count query throws an exception, use an estimate
+          count = offset + data.length + (data.length === limit ? limit : 0);
+        }
+      }
     } else {
       console.log('Skipping total count fetch for performance');
+      // Provide an estimate based on current data
+      count = offset + data.length + (data.length === limit ? limit : 0);
     }
 
     console.log(`Retrieved ${data ? data.length : 0} images from Supabase, total count: ${count}`);
@@ -128,6 +161,10 @@ exports.saveImage = async (prompt, imageData, format, duration = 0, isEdit = fal
       is_edit: data && data[0] ? data[0].is_edit : null
     });
 
+    // Invalidate the count cache since we've added a new image
+    countCache.value = null;
+    console.log('Count cache invalidated due to new image');
+
     return data[0] || null;
   } catch (error) {
     console.error('Supabase error saving image:', error);
@@ -170,6 +207,10 @@ exports.deleteImage = async (id) => {
       .eq('id', id);
 
     if (error) throw error;
+
+    // Invalidate the count cache since we've deleted an image
+    countCache.value = null;
+    console.log('Count cache invalidated due to image deletion');
 
     return true;
   } catch (error) {
