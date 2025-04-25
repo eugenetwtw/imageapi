@@ -50,6 +50,8 @@ const fs = require('fs');
 const path = require('path');
 const { Readable } = require('stream');
 
+const sharp = require('sharp');
+
 /**
  * Edit images using AI
  * @param {string} prompt - The text prompt
@@ -65,9 +67,30 @@ exports.editImage = async (prompt, files, size = 'auto', quality = 'auto', forma
   try {
     console.log(`Editing image with ${files.length} files`);
     
-    // Convert file buffers directly to OpenAI file format using toFile and Readable streams
-    const openaiFiles = await Promise.all(
+    // Convert file buffers, handling HEIC format conversion if necessary
+    const processedFiles = await Promise.all(
       files.map(async (file) => {
+        // Check if the file is in HEIC format
+        if (file.mimetype === 'image/heic' || file.mimetype === 'image/heif') {
+          console.log(`Converting HEIC file: ${file.originalname}`);
+          // Convert HEIC to PNG using sharp
+          const convertedBuffer = await sharp(file.buffer)
+            .png()
+            .toBuffer();
+          return {
+            ...file,
+            buffer: convertedBuffer,
+            mimetype: 'image/png',
+            originalname: file.originalname.replace(/\.(heic|heif)$/i, '.png')
+          };
+        }
+        return file;
+      })
+    );
+    
+    // Convert processed file buffers to OpenAI file format using toFile and Readable streams
+    const openaiFiles = await Promise.all(
+      processedFiles.map(async (file) => {
         // Create a readable stream from the buffer
         const stream = new Readable();
         stream.push(file.buffer);
