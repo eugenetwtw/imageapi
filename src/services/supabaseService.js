@@ -15,12 +15,27 @@ const TABLE_NAME = 'imageapi';
  */
 exports.getAllImages = async () => {
   try {
+    console.log('Fetching all images from Supabase table:', TABLE_NAME);
+    
     const { data, error } = await supabase
       .from(TABLE_NAME)
       .select('*')
       .order('created_at', { ascending: false });
 
     if (error) throw error;
+
+    console.log(`Retrieved ${data ? data.length : 0} images from Supabase`);
+    
+    // Log the first few images for debugging
+    if (data && data.length > 0) {
+      console.log('First image:', {
+        id: data[0].id,
+        prompt: data[0].prompt,
+        created_at: data[0].created_at,
+        is_edit: data[0].is_edit,
+        format: data[0].format
+      });
+    }
 
     return data || [];
   } catch (error) {
@@ -42,25 +57,47 @@ exports.getAllImages = async () => {
 exports.saveImage = async (prompt, imageData, format, duration = 0, isEdit = false, sourceType = 'text') => {
   // Ensure isEdit is a boolean
   const isEditBoolean = isEdit === true;
+  
+  console.log('Saving image to Supabase:', {
+    prompt: prompt,
+    format: format,
+    duration: duration,
+    isEdit: isEdit,
+    isEditBoolean: isEditBoolean,
+    sourceType: sourceType,
+    imageDataLength: imageData ? imageData.length : 0,
+    table: TABLE_NAME
+  });
+  
   try {
     const timestamp = new Date().toISOString();
     
+    const imageRecord = {
+      prompt: prompt,
+      image_data: imageData,
+      format: format,
+      created_at: timestamp,
+      duration_seconds: duration,
+      is_edit: isEditBoolean,
+      source_type: sourceType
+    };
+    
+    console.log('Image record prepared with is_edit:', imageRecord.is_edit);
+    
     const { data, error } = await supabase
       .from(TABLE_NAME)
-      .insert([
-        {
-          prompt: prompt,
-          image_data: imageData,
-          format: format,
-          created_at: timestamp,
-          duration_seconds: duration,
-          is_edit: isEditBoolean,
-          source_type: sourceType
-        }
-      ])
+      .insert([imageRecord])
       .select();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase insert error:', error);
+      throw error;
+    }
+
+    console.log('Image saved successfully:', {
+      id: data && data[0] ? data[0].id : null,
+      is_edit: data && data[0] ? data[0].is_edit : null
+    });
 
     return data[0] || null;
   } catch (error) {

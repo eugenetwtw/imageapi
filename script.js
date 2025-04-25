@@ -459,17 +459,29 @@ function showSuccess(message) {
 
 // Save image to Supabase
 async function saveToSupabase(image, isEdit = false) {
-    if (!image) return;
+    if (!image) {
+        console.error('No image data to save');
+        return;
+    }
     
     try {
+        console.log('Saving image to Supabase...', {
+            prompt: image.prompt,
+            format: image.format,
+            isEdit: isEdit,
+            dataLength: image.data ? image.data.length : 0,
+            duration: lastGenerationDuration
+        });
+        
         // Check if Supabase is initialized
         if (!window.supabase) {
             console.error('Database connection not initialized');
             return;
         }
         
-        // Save to gallery API endpoint
-        const response = await fetch('/api/gallery', {
+        // Save to gallery API endpoint with cache-busting
+        const timestamp = new Date().getTime();
+        const response = await fetch(`/api/gallery?_=${timestamp}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -479,18 +491,28 @@ async function saveToSupabase(image, isEdit = false) {
                 imageData: image.data,
                 format: image.format,
                 duration: lastGenerationDuration || 0,
-                isEdit: isEdit,
+                isEdit: isEdit === true,
                 sourceType: isEdit ? 'edit' : 'text'
             })
         });
         
         if (!response.ok) {
-            const error = await response.json();
-            console.error('Error saving to gallery:', error);
+            let errorMessage = 'Failed to save image to gallery';
+            try {
+                const errorData = await response.json();
+                errorMessage = errorData.message || errorMessage;
+                console.error('Error saving to gallery:', errorData);
+            } catch (parseError) {
+                console.error('Error parsing error response:', parseError);
+            }
             return;
         }
         
-        console.log('Image saved to gallery successfully');
+        const result = await response.json();
+        console.log('Image saved to gallery successfully', result);
+        
+        // Show success message to user
+        showSuccess('Image saved to gallery successfully!');
     } catch (error) {
         console.error('Error saving to gallery:', error);
     }

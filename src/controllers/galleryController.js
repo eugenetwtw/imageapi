@@ -37,8 +37,9 @@ exports.saveImage = async (req, res, next) => {
       return next(createError(400, 'Prompt, image data, and format are required'));
     }
 
-    // Ensure isEdit is a boolean
+    // Ensure isEdit is a boolean and log it
     const isEditBoolean = isEdit === true;
+    console.log('Saving image with isEdit:', isEdit, 'converted to:', isEditBoolean);
     
     // Save image to gallery
     const result = await supabaseService.saveImage(

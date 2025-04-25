@@ -99,6 +99,7 @@
         <header>
             <h1>Image Generation History</h1>
             <p>View your past image generations grouped by date</p>
+            <button id="refresh-btn" class="primary-btn" style="margin-top: 1rem;">Refresh History</button>
         </header>
         
         <div id="history-content">
@@ -121,7 +122,9 @@
         // Fetch gallery images
         async function loadHistory() {
             try {
-                const response = await fetch('/api/gallery');
+                // Add cache-busting parameter to prevent caching
+                const timestamp = new Date().getTime();
+                const response = await fetch(`/api/gallery?_=${timestamp}`);
                 
                 if (!response.ok) {
                     throw new Error('Failed to load history');
@@ -259,7 +262,46 @@
         }
         
         // Load history when page loads
-        document.addEventListener('DOMContentLoaded', loadHistory);
+        document.addEventListener('DOMContentLoaded', () => {
+            loadHistory();
+            
+            // Add event listener for refresh button
+            document.getElementById('refresh-btn').addEventListener('click', () => {
+                // Show loading spinner
+                document.getElementById('history-content').innerHTML = `
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Loading history...</p>
+                    </div>
+                `;
+                
+                // Force browser cache refresh
+                fetch('/api/gallery', { 
+                    method: 'GET',
+                    headers: {
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache',
+                        'Expires': '0'
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to refresh data');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Refreshed data:', data);
+                    // Reload history with fresh data
+                    loadHistory();
+                })
+                .catch(error => {
+                    console.error('Error refreshing data:', error);
+                    // Try regular load as fallback
+                    loadHistory();
+                });
+            });
+        });
     </script>
 </body>
 </html>
