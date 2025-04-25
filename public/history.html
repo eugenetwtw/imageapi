@@ -129,6 +129,8 @@
                 console.timeEnd('API Fetch Time');
                 
                 if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Failed to load history with status:', response.status, 'Error text:', errorText);
                     throw new Error('Failed to load history');
                 }
                 
