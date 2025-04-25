@@ -29,9 +29,10 @@ exports.getAllImages = async (limit = null, offset = 0, fetchTotal = false) => {
     console.log('Fetching images from Supabase table:', TABLE_NAME, 'with limit:', limit, 'and offset:', offset, 'fetchTotal:', fetchTotal);
     console.time('Supabase Fetch Data Time');
     
+    // Select only the necessary columns to reduce data transfer
     let query = supabase
       .from(TABLE_NAME)
-      .select('*')
+      .select('id, prompt, image_data, format, created_at, duration_seconds, is_edit, source_type')
       .order('created_at', { ascending: false });
     
     // Apply pagination only if limit is provided

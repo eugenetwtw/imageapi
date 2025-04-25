@@ -16,6 +16,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Initialize UI elements and event listeners
 function initializeUI() {
+    // Initialize prompt buttons
+    const promptButtons = document.querySelectorAll('.prompt-btn');
+    promptButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const promptText = button.getAttribute('data-prompt');
+            const promptInput = document.getElementById('prompt-input');
+            
+            // If the prompt input already has text, add the new prompt with a space
+            if (promptInput.value.trim() !== '') {
+                promptInput.value += ' ' + promptText;
+            } else {
+                promptInput.value = promptText;
+            }
+            
+            // Focus the prompt input and scroll to the end
+            promptInput.focus();
+            promptInput.scrollTop = promptInput.scrollHeight;
+        });
+    });
+    
     // Drop area functionality
     const dropArea = document.getElementById('drop-area');
     const fileInput = document.getElementById('file-input');
