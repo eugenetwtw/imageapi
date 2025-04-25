@@ -187,7 +187,7 @@ function removeFile(index) {
     updateImagePreview();
 }
 
-// Generate image using OpenAI API
+// Generate image using API
 async function generateImage() {
     // Get prompt
     const prompt = document.getElementById('prompt-input').value.trim();
@@ -216,11 +216,6 @@ async function generateImage() {
     downloadBtn.classList.add('hidden');
     
     try {
-        // Check if OpenAI API key is configured
-        if (!OPENAI_API_KEY) {
-            throw new Error('OpenAI API key is missing. Please check your config.js file.');
-        }
-        
         let result;
         
         // If files are selected, use image edit endpoint
@@ -256,79 +251,91 @@ async function generateImage() {
     }
 }
 
-// Create image using OpenAI API
+// Create image using API
 async function createImage(prompt, size, quality, format, compression, transparent) {
     try {
-        const options = {
+        const response = await fetch('/api/images/generate', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${OPENAI_API_KEY}`
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                model: "gpt-image-1",
-                prompt: prompt,
-                n: 1,
-                size: size !== 'auto' ? size : undefined,
-                quality: quality !== 'auto' ? quality : undefined,
-                response_format: 'b64_json',
-                background: transparent ? 'transparent' : undefined,
-                output_compression: compression !== null ? compression / 100 : undefined
+                prompt,
+                size,
+                quality,
+                format,
+                compression,
+                transparent
             })
-        };
-        
-        const response = await fetch('https://api.openai.com/v1/images/generations', options);
+        });
         
         if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error?.message || 'Failed to generate image');
+            let errorMessage = 'Failed to generate image';
+            try {
+                const errorData = await response.json();
+                errorMessage = errorData.message || errorMessage;
+            } catch (parseError) {
+                // If the response is not valid JSON, try to get the text
+                try {
+                    const errorText = await response.text();
+                    errorMessage = errorText || errorMessage;
+                } catch (textError) {
+                    console.error('Error parsing error response:', textError);
+                }
+            }
+            throw new Error(errorMessage);
         }
         
         const data = await response.json();
-        return data.data[0];
+        return data.data;
     } catch (error) {
         console.error('Error in createImage:', error);
         throw error;
     }
 }
 
-// Edit image using OpenAI API
+// Edit image using API
 async function editImage(prompt, files, size, quality, format, compression, transparent) {
     try {
         // Create FormData
         const formData = new FormData();
-        formData.append('model', 'gpt-image-1');
         formData.append('prompt', prompt);
-        formData.append('n', '1');
-        formData.append('response_format', 'b64_json');
         
         if (size !== 'auto') formData.append('size', size);
         if (quality !== 'auto') formData.append('quality', quality);
-        if (transparent) formData.append('background', 'transparent');
-        if (compression !== null) formData.append('output_compression', compression / 100);
+        formData.append('format', format);
+        if (compression !== null) formData.append('compression', compression);
+        formData.append('transparent', transparent);
         
         // Append all image files
         files.forEach(file => {
-            formData.append('image', file);
+            formData.append('images', file);
         });
         
-        const options = {
+        const response = await fetch('/api/images/edit', {
             method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${OPENAI_API_KEY}`
-            },
             body: formData
-        };
-        
-        const response = await fetch('https://api.openai.com/v1/images/edit', options);
+        });
         
         if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error?.message || 'Failed to edit image');
+            let errorMessage = 'Failed to edit image';
+            try {
+                const errorData = await response.json();
+                errorMessage = errorData.message || errorMessage;
+            } catch (parseError) {
+                // If the response is not valid JSON, try to get the text
+                try {
+                    const errorText = await response.text();
+                    errorMessage = errorText || errorMessage;
+                } catch (textError) {
+                    console.error('Error parsing error response:', textError);
+                }
+            }
+            throw new Error(errorMessage);
         }
         
         const data = await response.json();
-        return data.data[0];
+        return data.data;
     } catch (error) {
         console.error('Error in editImage:', error);
         throw error;
@@ -346,8 +353,6 @@ function downloadImage() {
     link.click();
     document.body.removeChild(link);
 }
-
-
 
 // Show error message
 function showError(message) {
