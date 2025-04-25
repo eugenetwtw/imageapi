@@ -434,13 +434,23 @@ async function loadGallery() {
         const images = data.data || [];
         
         const galleryContainer = document.getElementById('gallery-container');
-        const emptyMessage = document.getElementById('gallery-empty-message');
+        
+        // Check if gallery container exists
+        if (!galleryContainer) {
+            console.error('Gallery container not found');
+            return;
+        }
         
         // Clear existing gallery
         galleryContainer.innerHTML = '';
         
+        const emptyMessage = document.getElementById('gallery-empty-message');
+        
         if (images && images.length > 0) {
-            emptyMessage.style.display = 'none';
+            // Only update emptyMessage if it exists
+            if (emptyMessage) {
+                emptyMessage.style.display = 'none';
+            }
             
             // Add each image to gallery
             images.forEach(item => {
@@ -485,13 +495,18 @@ async function loadGallery() {
                 
                 galleryContainer.appendChild(galleryItem);
             });
-        } else {
+        } else if (emptyMessage) {
+            // Only update emptyMessage if it exists
             emptyMessage.style.display = 'block';
         }
     } catch (error) {
         console.error('Error loading gallery:', error);
         const galleryContainer = document.getElementById('gallery-container');
-        galleryContainer.innerHTML = `<div class="error">Failed to load gallery. Please try again.</div>`;
+        if (galleryContainer) {
+            galleryContainer.innerHTML = `<div class="error">Failed to load gallery. Please try again.</div>`;
+        } else {
+            console.error('Gallery container not found for error display');
+        }
     }
 }
 
