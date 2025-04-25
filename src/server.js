@@ -17,8 +17,8 @@ const PORT = process.env.PORT || 3000;
 // Apply middleware
 app.use(helmet({ contentSecurityPolicy: false })); // Disable CSP for development
 app.use(cors());
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(express.json({ limit: '100mb' }));
+app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
 // Rate limiting
