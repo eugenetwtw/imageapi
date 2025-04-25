@@ -119,10 +119,10 @@
     </footer>
     
     <script>
-        // Fetch all gallery images without pagination
+        // Fetch all gallery images without any limit
         async function loadHistory() {
             try {
-                // Add cache-busting parameter
+                // Add cache-busting parameter, no limit to fetch all records
                 const timestamp = new Date().getTime();
                 console.time('API Fetch Time');
                 const response = await fetch(`/api/gallery?_=${timestamp}`);
