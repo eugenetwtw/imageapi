@@ -187,15 +187,13 @@
                         const timeCell = document.createElement('td');
                         timeCell.textContent = new Date(item.created_at).toLocaleTimeString();
                         
-                        // Thumbnail cell
-                        const thumbnailCell = document.createElement('td');
-                        
-                        const thumbnail = document.createElement('img');
-                        thumbnail.src = `data:image/${item.format};base64,${item.image_data}`;
-                        thumbnail.alt = item.prompt;
-                        thumbnail.className = 'thumbnail';
-                        
-                        thumbnailCell.appendChild(thumbnail);
+                        // Uploaded Thumbnail cell
+                        const uploadedThumbnailCell = document.createElement('td');
+                        if (item.is_edit === true) {
+                            uploadedThumbnailCell.textContent = 'Original photo not stored';
+                        } else {
+                            uploadedThumbnailCell.textContent = 'N/A';
+                        }
                         
                         // Prompt cell
                         const promptCell = document.createElement('td');
@@ -205,13 +203,13 @@
                         const typeCell = document.createElement('td');
                         typeCell.textContent = item.is_edit === true ? 'Edit' : 'Text-to-Image';
                         
-                        // Uploaded Photo cell
-                        const uploadedPhotoCell = document.createElement('td');
-                        if (item.is_edit === true) {
-                            uploadedPhotoCell.textContent = 'Original photo not stored';
-                        } else {
-                            uploadedPhotoCell.textContent = 'N/A';
-                        }
+                        // Photo cell (Generated Image Thumbnail)
+                        const photoCell = document.createElement('td');
+                        const photoThumbnail = document.createElement('img');
+                        photoThumbnail.src = `data:image/${item.format};base64,${item.image_data}`;
+                        photoThumbnail.alt = item.prompt;
+                        photoThumbnail.className = 'thumbnail';
+                        photoCell.appendChild(photoThumbnail);
                         
                         // Duration cell
                         const durationCell = document.createElement('td');
@@ -232,10 +230,10 @@
                         
                         // Append cells to row
                         row.appendChild(timeCell);
-                        row.appendChild(thumbnailCell);
+                        row.appendChild(uploadedThumbnailCell);
                         row.appendChild(promptCell);
                         row.appendChild(typeCell);
-                        row.appendChild(uploadedPhotoCell);
+                        row.appendChild(photoCell);
                         row.appendChild(durationCell);
                         row.appendChild(actionsCell);
                         
