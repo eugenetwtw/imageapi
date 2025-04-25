@@ -10,6 +10,8 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Initialize Supabase
     initializeSupabase();
+    
+    // No need to load gallery anymore
 });
 
 // Initialize UI elements and event listeners
