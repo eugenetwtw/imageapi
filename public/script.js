@@ -122,7 +122,7 @@ function handleDrop(e) {
 }
 
 // Handle selected files
-function handleFiles(e) {
+async function handleFiles(e) {
     const files = Array.from(e.target.files);
     const imageFiles = files.filter(file => file.type.startsWith('image/'));
     
@@ -131,8 +131,32 @@ function handleFiles(e) {
         return;
     }
     
-    // Add new files to selectedFiles array
-    selectedFiles = [...selectedFiles, ...imageFiles];
+    // Process files, converting HEIC to JPEG if necessary
+    const processedFiles = [];
+    for (const file of imageFiles) {
+        if (file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif')) {
+            try {
+                showSuccess(`Converting ${file.name} to JPEG...`);
+                const blob = await heic2any({
+                    blob: file,
+                    toType: 'image/jpeg'
+                });
+                const convertedFile = new File([blob], file.name.replace(/\.(heic|heif)$/i, '.jpg'), {
+                    type: 'image/jpeg'
+                });
+                processedFiles.push(convertedFile);
+                showSuccess(`${file.name} converted successfully.`);
+            } catch (error) {
+                console.error('Error converting HEIC file:', error);
+                showError(`Failed to convert ${file.name}. Please convert manually to JPEG or PNG.`);
+            }
+        } else {
+            processedFiles.push(file);
+        }
+    }
+    
+    // Add processed files to selectedFiles array
+    selectedFiles = [...selectedFiles, ...processedFiles];
     
     // Update preview
     updateImagePreview();

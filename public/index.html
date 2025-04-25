@@ -3,102 +3,98 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Image API - OpenAI Image Generator</title>
+    <title>OpenAI Image Generator</title>
     <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <script src="https://unpkg.com/heic2any@0.0.3/dist/heic2any.min.js"></script>
 </head>
 <body>
     <div class="container">
         <header>
             <h1>OpenAI Image Generator</h1>
-            <p>Upload images and generate new ones with AI</p>
+            <p>Generate images from text prompts or edit existing images with AI.</p>
         </header>
 
-        <main>
-            <section class="input-section">
-                <div class="prompt-container">
-                    <h2>Enter your prompt</h2>
-                    <textarea id="prompt-input" placeholder="Describe what you want to generate..."></textarea>
+        <section class="input-section">
+            <div class="prompt-container">
+                <label for="prompt-input">Image Prompt:</label>
+                <textarea id="prompt-input" placeholder="Enter a detailed description of the image you want to generate..." rows="3"></textarea>
+            </div>
+
+            <div id="drop-area">
+                <i class="fas fa-cloud-upload-alt"></i>
+                <p>Drag and drop images here or click to browse</p>
+                <input type="file" id="file-input" accept="image/*" multiple style="display: none;">
+            </div>
+
+            <div id="preview-container" class="hidden">
+                <h3>Selected Images</h3>
+                <div id="image-preview"></div>
+            </div>
+
+            <div class="options-container">
+                <div class="option-group">
+                    <label for="size-select">Size:</label>
+                    <select id="size-select">
+                        <option value="auto">Auto</option>
+                        <option value="256x256">256x256</option>
+                        <option value="512x512">512x512</option>
+                        <option value="1024x1024" selected>1024x1024</option>
+                        <option value="1792x1024">1792x1024</option>
+                        <option value="1024x1792">1024x1792</option>
+                    </select>
                 </div>
 
-                <div class="upload-container">
-                    <h2>Upload reference images (optional)</h2>
-                    <div id="drop-area">
-                        <p>Drag & drop images here or</p>
-                        <input type="file" id="file-input" multiple accept="image/*">
-                        <label for="file-input" class="upload-btn">Choose Files</label>
-                    </div>
-                    <div id="preview-container" class="hidden">
-                        <h3>Selected Images:</h3>
-                        <div id="image-preview"></div>
-                    </div>
+                <div class="option-group">
+                    <label for="quality-select">Quality:</label>
+                    <select id="quality-select">
+                        <option value="auto">Auto</option>
+                        <option value="standard" selected>Standard</option>
+                        <option value="hd">HD</option>
+                    </select>
                 </div>
 
-                <div class="options-container">
-                    <h2>Image Options</h2>
-                    <div class="option-group">
-                        <label for="size-select">Size:</label>
-                        <select id="size-select">
-                            <option value="auto">Auto (Default)</option>
-                            <option value="1024x1024">1024x1024 (Square)</option>
-                            <option value="1536x1024">1536x1024 (Portrait)</option>
-                            <option value="1024x1536">1024x1536 (Landscape)</option>
-                        </select>
-                    </div>
-                    <div class="option-group">
-                        <label for="quality-select">Quality:</label>
-                        <select id="quality-select">
-                            <option value="auto">Auto (Default)</option>
-                            <option value="low">Low</option>
-                            <option value="medium">Medium</option>
-                            <option value="high">High</option>
-                        </select>
-                    </div>
-                    <div class="option-group">
-                        <label for="format-select">Format:</label>
-                        <select id="format-select">
-                            <option value="png">PNG</option>
-                            <option value="jpeg">JPEG</option>
-                            <option value="webp">WebP</option>
-                        </select>
-                    </div>
-                    <div class="option-group">
-                        <label for="compression-range">Compression (JPEG/WebP):</label>
-                        <input type="range" id="compression-range" min="0" max="100" value="80">
-                        <span id="compression-value">80%</span>
-                    </div>
-                    <div class="option-group checkbox-group">
-                        <input type="checkbox" id="transparent-bg">
-                        <label for="transparent-bg">Transparent Background (PNG/WebP only)</label>
-                    </div>
+                <div class="option-group">
+                    <label for="format-select">Format:</label>
+                    <select id="format-select">
+                        <option value="png" selected>PNG</option>
+                        <option value="jpeg">JPEG</option>
+                        <option value="webp">WebP</option>
+                    </select>
                 </div>
 
-                <button id="generate-btn" class="primary-btn">Generate Image</button>
-            </section>
-
-            <section id="result-section" class="result-section hidden">
-                <h2>Generated Image</h2>
-                <div id="loading" class="hidden">
-                    <div class="spinner"></div>
-                    <p>Generating your image...</p>
+                <div class="option-group">
+                    <label for="compression-range">Compression: <span id="compression-value">80%</span></label>
+                    <input type="range" id="compression-range" min="0" max="100" value="80">
                 </div>
-                <div id="result-container"></div>
+
+                <div class="option-group">
+                    <label for="transparent-bg">Transparent Background:</label>
+                    <input type="checkbox" id="transparent-bg">
+                </div>
+            </div>
+
+            <button id="generate-btn" class="primary-btn">Generate Image</button>
+        </section>
+
+        <section id="result-section" class="hidden">
+            <h2>Generated Image</h2>
+            <div id="loading" class="hidden">
+                <div class="spinner"></div>
+                <p>Generating image, please wait...</p>
+            </div>
+            <div id="result-container"></div>
+            <div class="button-group">
                 <button id="download-btn" class="secondary-btn hidden">Download Image</button>
                 <button id="save-btn" class="secondary-btn hidden">Save to Gallery</button>
-            </section>
-        </main>
-
-        <section id="gallery-section" class="gallery-section">
-            <h2>Your Gallery</h2>
-            <div id="gallery-container">
-                <!-- Gallery items will be loaded here -->
-                <p id="gallery-empty-message">Your saved images will appear here</p>
             </div>
         </section>
 
-        <footer>
-            <p>Powered by OpenAI Image API | <a href="/terms.html" target="_blank">Terms of Service</a></p>
-        </footer>
+        <section id="gallery-section">
+            <h2>Gallery</h2>
+            <p id="gallery-empty-message" style="display: none;">Your gallery is empty. Generate and save some images to see them here.</p>
+            <div id="gallery-container"></div>
+        </section>
     </div>
 
     <script src="script.js"></script>
