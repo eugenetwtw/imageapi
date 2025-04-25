@@ -65,26 +65,22 @@ exports.editImage = async (prompt, files, size = 'auto', quality = 'auto', forma
   try {
     console.log(`Editing image with ${files.length} files`);
     
-    // Create temporary files from the buffers
-    const tempFiles = [];
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      const tempFilePath = path.join(__dirname, `../../temp/temp_image_${i}.png`);
-      fs.writeFileSync(tempFilePath, file.buffer);
-      tempFiles.push(tempFilePath);
-      console.log(`Created temp file: ${tempFilePath}`);
-    }
-    
-    // Convert file streams to OpenAI file format using toFile
+    // Convert file buffers directly to OpenAI file format using toFile and Readable streams
     const openaiFiles = await Promise.all(
-      tempFiles.map(async (file) => {
-        return await toFile(fs.createReadStream(file), null, {
-          type: "image/png",
+      files.map(async (file) => {
+        // Create a readable stream from the buffer
+        const stream = new Readable();
+        stream.push(file.buffer);
+        stream.push(null); // Signal the end of the stream
+        
+        // Convert to OpenAI file format
+        return await toFile(stream, file.originalname, {
+          type: file.mimetype,
         });
       })
     );
     
-    console.log('Created OpenAI files:', openaiFiles.map(f => f.filename));
+    console.log('Created OpenAI files:', openaiFiles.map(f => f.filename || 'unnamed'));
     
     // Prepare request parameters
     const params = {
@@ -107,16 +103,6 @@ exports.editImage = async (prompt, files, size = 'auto', quality = 'auto', forma
     
     // Call OpenAI API
     const response = await openai.images.edit(params);
-    
-    // Clean up temporary files
-    tempFiles.forEach(file => {
-      try {
-        fs.unlinkSync(file);
-        console.log(`Deleted temp file: ${file}`);
-      } catch (err) {
-        console.error(`Error deleting temp file ${file}:`, err);
-      }
-    });
 
     // Return the generated image data
     return {
