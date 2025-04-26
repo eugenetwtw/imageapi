@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+    <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -247,7 +247,13 @@
                         
                         // Model cell
                         const modelCell = document.createElement('td');
-                        modelCell.textContent = item.model || 'Unknown';
+                        if (item.model === 'grok') {
+                            modelCell.textContent = 'grok-2-1212';
+                        } else if (item.model === 'openai') {
+                            modelCell.textContent = 'gpt-image-1';
+                        } else {
+                            modelCell.textContent = item.model || 'Unknown';
+                        }
                         
                         // Duration cell
                         const durationCell = document.createElement('td');
