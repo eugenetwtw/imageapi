@@ -197,7 +197,12 @@ exports.editImage = async (prompt, files, size = 'auto', model = 'openai', quali
     
     // Determine which API to use based on the model parameter
     if (model === 'grok') {
-      return await editWithGrok(prompt, files, size, quality, format, compression, transparent);
+      try {
+        return await editWithGrok(prompt, files, size, quality, format, compression, transparent);
+      } catch (error) {
+        console.error('Falling back to OpenAI due to Grok failure:', error);
+        // Fall back to OpenAI if Grok fails
+      }
     }
     
     // Convert file buffers, handling HEIC format conversion if necessary
