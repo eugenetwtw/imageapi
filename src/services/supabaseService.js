@@ -125,7 +125,7 @@ exports.getAllImages = async (limit = null, offset = 0, fetchTotal = false, user
  * @param {string} model - The model used for image generation (e.g., 'openai', 'grok-2-image')
  * @returns {Object} Saved image data
  */
-exports.saveImage = async (prompt, imageData, format, duration = 0, isEdit = false, sourceType = 'text', userId = null, model = 'openai') => {
+exports.saveImage = async (prompt, imageData, format, duration = 0, isEdit = false, sourceType = 'text', userId = null, model = 'grok') => {
   // Ensure isEdit is a boolean
   const isEditBoolean = isEdit === true;
   
