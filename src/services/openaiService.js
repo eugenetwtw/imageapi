@@ -77,12 +77,7 @@ exports.generateImage = async (prompt, size = 'auto', model = 'openai', quality 
   try {
     // Determine which API to use based on the model parameter
     if (model === 'grok') {
-      try {
-        return await generateWithGrok(prompt, size, quality, format, compression, transparent);
-      } catch (error) {
-        console.error('Falling back to OpenAI due to Grok failure:', error);
-        // Fall back to OpenAI if Grok fails
-      }
+      return await generateWithGrok(prompt, size, quality, format, compression, transparent);
     }
     
     // Default to OpenAI

@@ -65,7 +65,7 @@ exports.saveImage = async (req, res, next) => {
       isEditBoolean, 
       sourceType || 'text',
       userId,
-      model || 'grok'
+      model || 'openai'
     );
 
     res.status(201).json({

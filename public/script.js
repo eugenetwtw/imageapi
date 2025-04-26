@@ -156,12 +156,6 @@ async function initializeSupabaseClient() {
 
 // Initialize UI elements and event listeners
 function initializeUI() {
-    // Set default model to 'grok'
-    const modelSelect = document.getElementById('model-select');
-    if (modelSelect) {
-        modelSelect.value = 'grok';
-    }
-    
     // Initialize prompt buttons
     const promptButtons = document.querySelectorAll('.prompt-btn');
     promptButtons.forEach(button => {
