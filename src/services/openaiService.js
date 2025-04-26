@@ -8,76 +8,27 @@ const openai = new OpenAI({
 });
 
 /**
- * Generate an image using Grok API
- * @param {string} prompt - The text prompt
- * @param {string} size - Image size (e.g., '1024x1024')
- * @param {string} quality - Image quality (e.g., 'standard', 'hd')
- * @param {string} format - Image format (e.g., 'png', 'jpeg', 'webp')
- * @param {number} compression - Compression level (0-100)
- * @param {boolean} transparent - Whether to use transparent background
- * @returns {Object} Generated image data
- */
-async function generateWithGrok(prompt, size = 'auto', quality = 'auto', format = 'png', compression = null, transparent = false) {
-  try {
-    console.log('Generating image with Grok API');
-    
-    // Prepare request parameters for Grok API
-    const params = {
-      model: "grok-2-image-1212",
-      prompt: prompt,
-      n: 1
-    };
-    
-    // Add optional parameters if provided
-    if (size !== 'auto') {
-      // Convert size format if needed (e.g., '1024x1024' to { width: 1024, height: 1024 })
-      const [width, height] = size.split('x').map(Number);
-      if (width && height) {
-        params.width = width;
-        params.height = height;
-      }
-    }
-    
-    // Make request to Grok API
-    const response = await axios.post('https://api.grok.ai/v1/images/generations', params, {
-      headers: {
-        'Authorization': `Bearer ${process.env.GROK_API_KEY}`,
-        'Content-Type': 'application/json'
-      }
-    });
-    
-    // Process response
-    if (response.data && response.data.data && response.data.data.length > 0) {
-      return {
-        b64_json: response.data.data[0].b64_json || null,
-        url: response.data.data[0].url || null,
-        format: format
-      };
-    } else {
-      throw new Error('Invalid response from Grok API');
-    }
-  } catch (error) {
-    console.error('Grok image generation error:', error);
-    throw new Error(error.message || 'Failed to generate image with Grok');
-  }
-}
-
-/**
  * Generate an image from a text prompt
  * @param {string} prompt - The text prompt
  * @param {string} size - Image size (e.g., '1024x1024')
  * @param {string} model - Model to use (e.g., 'openai', 'grok')
  * @param {string} quality - Image quality (e.g., 'standard', 'hd')
- * @param {string} format - Image format (e.g., 'png', 'jpeg', 'webp')
- * @param {number} compression - Compression level (0-100)
  * @param {boolean} transparent - Whether to use transparent background
  * @returns {Object} Generated image data
  */
-exports.generateImage = async (prompt, size = 'auto', model = 'openai', quality = 'auto', format = 'png', compression = null, transparent = false) => {
+exports.generateImage = async (prompt, size = 'auto', model = 'openai', quality = 'auto', transparent = false) => {
   try {
+    // Hardcode format to PNG as per user request
+    const format = 'png';
+    
     // Determine which API to use based on the model parameter
     if (model === 'grok') {
-      return await generateWithGrok(prompt, size, quality, format, compression, transparent);
+      try {
+        return await generateWithGrok(prompt, size, quality, format, null, transparent);
+      } catch (error) {
+        console.error('Falling back to OpenAI due to Grok failure:', error);
+        // Fall back to OpenAI if Grok fails
+      }
     }
     
     // Default to OpenAI
@@ -91,8 +42,7 @@ exports.generateImage = async (prompt, size = 'auto', model = 'openai', quality 
     // Add optional parameters if provided
     if (size !== 'auto') params.size = size;
     if (quality !== 'auto') params.quality = quality;
-    if (transparent && (format === 'png' || format === 'webp')) params.background = 'transparent';
-    if (compression !== null && format !== 'png') params.output_compression = compression / 100;
+    if (transparent) params.background = 'transparent';
 
     // Call OpenAI API
     const response = await openai.images.generate(params);
@@ -186,19 +136,20 @@ async function editWithGrok(prompt, files, size = 'auto', quality = 'auto', form
  * @param {string} size - Image size (e.g., '1024x1024')
  * @param {string} model - Model to use (e.g., 'openai', 'grok')
  * @param {string} quality - Image quality (e.g., 'standard', 'hd')
- * @param {string} format - Image format (e.g., 'png', 'jpeg', 'webp')
- * @param {number} compression - Compression level (0-100)
  * @param {boolean} transparent - Whether to use transparent background
  * @returns {Object} Generated image data
  */
-exports.editImage = async (prompt, files, size = 'auto', model = 'openai', quality = 'auto', format = 'png', compression = null, transparent = false) => {
+exports.editImage = async (prompt, files, size = 'auto', model = 'openai', quality = 'auto', transparent = false) => {
   try {
     console.log(`Editing image with ${files.length} files using ${model} model`);
+    
+    // Hardcode format to PNG as per user request
+    const format = 'png';
     
     // Determine which API to use based on the model parameter
     if (model === 'grok') {
       try {
-        return await editWithGrok(prompt, files, size, quality, format, compression, transparent);
+        return await editWithGrok(prompt, files, size, quality, format, null, transparent);
       } catch (error) {
         console.error('Falling back to OpenAI due to Grok failure:', error);
         // Fall back to OpenAI if Grok fails
@@ -254,8 +205,7 @@ exports.editImage = async (prompt, files, size = 'auto', model = 'openai', quali
     // Add optional parameters if provided
     if (size !== 'auto') params.size = size;
     if (quality !== 'auto') params.quality = quality;
-    if (transparent && (format === 'png' || format === 'webp')) params.background = 'transparent';
-    if (compression !== null && format !== 'png') params.output_compression = compression / 100;
+    if (transparent) params.background = 'transparent';
     
     console.log('Sending request to OpenAI API with params:', JSON.stringify(params, (key, value) => {
       if (key === 'image') return '[Image Stream]';

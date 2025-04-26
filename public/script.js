@@ -205,41 +205,8 @@ function initializeUI() {
         fileInput.click();
     }, false);
     
-    // Compression range
-    const compressionRange = document.getElementById('compression-range');
-    const compressionValue = document.getElementById('compression-value');
-    
-    compressionRange.addEventListener('input', () => {
-        compressionValue.textContent = `${compressionRange.value}%`;
-    });
-    
-    // Format select - disable/enable compression and transparent options
-    const formatSelect = document.getElementById('format-select');
-    const compressionGroup = document.querySelector('.option-group:nth-of-type(4)');
-    const transparentGroup = document.querySelector('.option-group:nth-of-type(5)');
-    
-    formatSelect.addEventListener('change', () => {
-        const format = formatSelect.value;
-        
-        // Enable/disable compression based on format
-        if (format === 'png') {
-            compressionGroup.style.opacity = '0.5';
-            compressionGroup.style.pointerEvents = 'none';
-        } else {
-            compressionGroup.style.opacity = '1';
-            compressionGroup.style.pointerEvents = 'auto';
-        }
-        
-        // Enable/disable transparent background based on format
-        if (format === 'jpeg') {
-            transparentGroup.style.opacity = '0.5';
-            transparentGroup.style.pointerEvents = 'none';
-            document.getElementById('transparent-bg').checked = false;
-        } else {
-            transparentGroup.style.opacity = '1';
-            transparentGroup.style.pointerEvents = 'auto';
-        }
-    });
+    // Removed compression range and format select event listeners as per user request
+    // Format is hardcoded to PNG and compression is removed
     
     // Generate button
     const generateBtn = document.getElementById('generate-btn');
@@ -381,9 +348,9 @@ async function generateImage() {
     const size = document.getElementById('size-select').value;
     const model = document.getElementById('model-select').value;
     const quality = document.getElementById('quality-select').value;
-    const format = document.getElementById('format-select').value;
-    const compression = format !== 'png' ? parseInt(document.getElementById('compression-range').value, 10) : null;
-    const transparent = document.getElementById('transparent-bg').checked && (format === 'png' || format === 'webp');
+    const format = 'png'; // Hardcoded to PNG as per user request
+    const compression = null; // Compression is removed as it's not needed for PNG
+    const transparent = document.getElementById('transparent-bg').checked;
     
     // Show loading
     const resultSection = document.getElementById('result-section');
