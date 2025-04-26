@@ -15,6 +15,7 @@
                 <div class="title-container">
                     <h1>OpenAI Image Generator</h1>
                     <p>Generate images from text prompts or edit existing images with AI.</p>
+                    <a href="/history.html" class="history-link">View History</a>
                 </div>
                 <div class="auth-container">
                     <button id="signInBtn" class="auth-btn">
@@ -99,6 +100,14 @@
                         <option value="1024x1024" selected>1024x1024</option>
                         <option value="1792x1024">1792x1024</option>
                         <option value="1024x1792">1024x1792</option>
+                    </select>
+                </div>
+
+                <div class="option-group">
+                    <label for="model-select">Model:</label>
+                    <select id="model-select">
+                        <option value="openai" selected>OpenAI</option>
+                        <option value="grok">Grok</option>
                     </select>
                 </div>
 

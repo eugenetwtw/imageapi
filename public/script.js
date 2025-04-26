@@ -379,6 +379,7 @@ async function generateImage() {
     
     // Get options
     const size = document.getElementById('size-select').value;
+    const model = document.getElementById('model-select').value;
     const quality = document.getElementById('quality-select').value;
     const format = document.getElementById('format-select').value;
     const compression = format !== 'png' ? parseInt(document.getElementById('compression-range').value, 10) : null;
@@ -549,6 +550,9 @@ async function generateImage() {
 // Create image using API
 async function createImage(prompt, size, quality, format, compression, transparent) {
     try {
+        // Get the selected model
+        const model = document.getElementById('model-select').value;
+        
         const response = await fetch('/api/images/generate', {
             method: 'POST',
             headers: {
@@ -557,6 +561,7 @@ async function createImage(prompt, size, quality, format, compression, transpare
             body: JSON.stringify({
                 prompt,
                 size,
+                model,
                 quality,
                 format,
                 compression,
@@ -579,10 +584,14 @@ async function createImage(prompt, size, quality, format, compression, transpare
 // Edit image using API
 async function editImage(prompt, files, size, quality, format, compression, transparent) {
     try {
+        // Get the selected model
+        const model = document.getElementById('model-select').value;
+        
         const formData = new FormData();
         formData.append('prompt', prompt);
         
         if (size !== 'auto') formData.append('size', size);
+        formData.append('model', model);
         if (quality !== 'auto') formData.append('quality', quality);
         formData.append('format', format);
         // Temporarily omit compression due to type mismatch issue with FormData

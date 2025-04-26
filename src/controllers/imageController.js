@@ -15,7 +15,7 @@ const openai = new OpenAI({
  */
 exports.generateImage = async (req, res, next) => {
   try {
-    const { prompt, size, quality, format, compression, transparent } = req.body;
+    const { prompt, size, model, quality, format, compression, transparent } = req.body;
 
     // Validate request
     if (!prompt) {
@@ -26,6 +26,7 @@ exports.generateImage = async (req, res, next) => {
     const result = await openaiService.generateImage(
       prompt, 
       size, 
+      model, 
       quality, 
       format, 
       compression, 
@@ -50,7 +51,7 @@ exports.generateImage = async (req, res, next) => {
  */
 exports.editImage = async (req, res, next) => {
   try {
-    const { prompt, size, quality, format, compression, transparent } = req.body;
+    const { prompt, size, model, quality, format, compression, transparent } = req.body;
     const files = req.files;
 
     // Log the files object structure
@@ -75,6 +76,7 @@ exports.editImage = async (req, res, next) => {
       prompt,
       files,
       size,
+      model,
       quality,
       format,
       compression,
