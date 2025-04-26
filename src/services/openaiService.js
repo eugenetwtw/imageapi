@@ -16,7 +16,7 @@ const openai = new OpenAI({
  * @param {boolean} transparent - Whether to use transparent background
  * @returns {Object} Generated image data
  */
-exports.generateImage = async (prompt, size = 'auto', model = 'openai', quality = 'auto', transparent = false) => {
+exports.generateImage = async (prompt, size = 'auto', model = 'grok', quality = 'auto', transparent = false) => {
   try {
     // Hardcode format to PNG as per user request
     const format = 'png';
@@ -139,7 +139,7 @@ async function editWithGrok(prompt, files, size = 'auto', quality = 'auto', form
  * @param {boolean} transparent - Whether to use transparent background
  * @returns {Object} Generated image data
  */
-exports.editImage = async (prompt, files, size = 'auto', model = 'openai', quality = 'auto', transparent = false) => {
+exports.editImage = async (prompt, files, size = 'auto', model = 'grok', quality = 'auto', transparent = false) => {
   try {
     console.log(`Editing image with ${files.length} files using ${model} model`);
     
