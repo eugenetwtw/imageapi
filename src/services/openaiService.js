@@ -19,7 +19,7 @@ const openai = new OpenAI({
 exports.generateImage = async (prompt, size = 'auto', model = 'grok', quality = 'auto', transparent = false) => {
   try {
     // Hardcode format to PNG as per user request
-    //const format = 'png';
+    const format = 'png';
     
     // Determine which API to use based on the model parameter
     if (model === 'grok') {
@@ -144,7 +144,7 @@ exports.editImage = async (prompt, files, size = 'auto', model = 'grok', quality
     console.log(`Editing image with ${files.length} files using ${model} model`);
     
     // Hardcode format to PNG as per user request
-    //const format = 'png';
+    const format = 'png';
     
     // Determine which API to use based on the model parameter
     if (model === 'grok') {
