@@ -427,6 +427,8 @@ async function generateImage() {
                     if (i === 0) {
                         generatedImage = res;
                     }
+                    // Automatically save each generated image to the database
+                    await saveImageToGallery(prompt, res.data, format, lastGenerationDuration, true, 'edit', model);
                 } else {
                     showError(`Failed to process image ${i + 1}. Continuing with remaining images.`);
                 }
@@ -434,7 +436,6 @@ async function generateImage() {
             
             if (generatedImages.length > 0) {
                 downloadBtn.classList.remove('hidden');
-                // Gallery functionality removed
             } else {
                 throw new Error('Failed to generate any images. Please try again.');
             }
@@ -457,7 +458,6 @@ async function generateImage() {
                     
                     resultContainer.appendChild(img);
                     downloadBtn.classList.remove('hidden');
-                    // Gallery functionality removed
                 } else if (result.data.url) {
                     // Handle URL response
                     const img = document.createElement('img');
@@ -482,13 +482,14 @@ async function generateImage() {
                         };
                         
                         downloadBtn.classList.remove('hidden');
-                        saveBtn.classList.remove('hidden');
                     };
                     
                     resultContainer.appendChild(img);
                 } else {
                     throw new Error('Failed to generate image. Please try again.');
                 }
+                // Automatically save the generated image to the database
+                await saveImageToGallery(prompt, generatedImage.data, format, lastGenerationDuration, false, 'text-to-image', model);
             } else {
                 throw new Error('Failed to generate image. Please try again.');
             }
@@ -612,7 +613,40 @@ function downloadImage() {
     }
 }
 
-// Gallery functionality removed
+// Save image to gallery
+async function saveImageToGallery(prompt, imageData, format, duration, isEdit, sourceType, model) {
+    try {
+        const response = await fetch('/api/gallery', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                prompt: prompt,
+                imageData: imageData,
+                format: format,
+                duration: duration,
+                isEdit: isEdit,
+                sourceType: sourceType,
+                model: model
+            })
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to save image to gallery');
+        }
+        
+        const result = await response.json();
+        console.log('Image saved to gallery:', result);
+        showSuccess('Image saved to gallery successfully!');
+        return result;
+    } catch (error) {
+        console.error('Error saving image to gallery:', error);
+        showError('Failed to save image to gallery.');
+        return null;
+    }
+}
 
 // Show error message
 function showError(message) {
