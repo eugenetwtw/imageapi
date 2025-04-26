@@ -9,6 +9,10 @@ const rateLimit = require('express-rate-limit');
 // Import routes
 const imageRoutes = require('./routes/imageRoutes');
 const galleryRoutes = require('./routes/galleryRoutes');
+const authRoutes = require('./routes/authRoutes');
+
+// Import middleware
+const { verifyAuth } = require('./middleware/authMiddleware');
 
 // Initialize Express app
 const app = express();
@@ -35,7 +39,8 @@ app.use('/api', apiLimiter);
 
 // API routes
 app.use('/api/images', imageRoutes);
-app.use('/api/gallery', galleryRoutes);
+app.use('/api/gallery', verifyAuth, galleryRoutes);
+app.use('/api/auth', authRoutes);
 
 // Serve static files from the public directory
 app.use(express.static(path.join(__dirname, '../public')));

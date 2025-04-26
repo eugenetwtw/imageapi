@@ -22,18 +22,24 @@ const countCache = {
  * @param {number} limit - Number of items to fetch (optional, if not provided, fetch all)
  * @param {number} offset - Offset for pagination (optional)
  * @param {boolean} fetchTotal - Whether to fetch the total count (can be skipped for performance)
+ * @param {string} userId - Filter images by user ID (optional)
  * @returns {Object} Object containing array of gallery images and total count (if fetched)
  */
-exports.getAllImages = async (limit = null, offset = 0, fetchTotal = false) => {
+exports.getAllImages = async (limit = null, offset = 0, fetchTotal = false, userId = null) => {
   try {
-    console.log('Fetching images from Supabase table:', TABLE_NAME, 'with limit:', limit, 'and offset:', offset, 'fetchTotal:', fetchTotal);
+    console.log('Fetching images from Supabase table:', TABLE_NAME, 'with limit:', limit, 'and offset:', offset, 'fetchTotal:', fetchTotal, 'userId:', userId);
     console.time('Supabase Fetch Data Time');
     
     // Select only the necessary columns to reduce data transfer
     let query = supabase
       .from(TABLE_NAME)
-      .select('id, prompt, image_data, format, created_at, duration_seconds, is_edit, source_type')
+      .select('id, prompt, image_data, format, created_at, duration_seconds, is_edit, source_type, user_id')
       .order('created_at', { ascending: false });
+    
+    // Filter by user_id if provided
+    if (userId) {
+      query = query.eq('user_id', userId);
+    }
     
     // Apply pagination only if limit is provided
     if (limit !== null) {
@@ -115,9 +121,10 @@ exports.getAllImages = async (limit = null, offset = 0, fetchTotal = false) => {
  * @param {number} duration - Duration in seconds it took to generate the image
  * @param {boolean} isEdit - Whether this was an edit operation
  * @param {string} sourceType - Source type of the image (text, edit, etc.)
+ * @param {string} userId - The ID of the user who created the image (optional)
  * @returns {Object} Saved image data
  */
-exports.saveImage = async (prompt, imageData, format, duration = 0, isEdit = false, sourceType = 'text') => {
+exports.saveImage = async (prompt, imageData, format, duration = 0, isEdit = false, sourceType = 'text', userId = null) => {
   // Ensure isEdit is a boolean
   const isEditBoolean = isEdit === true;
   
@@ -128,6 +135,7 @@ exports.saveImage = async (prompt, imageData, format, duration = 0, isEdit = fal
     isEdit: isEdit,
     isEditBoolean: isEditBoolean,
     sourceType: sourceType,
+    userId: userId,
     imageDataLength: imageData ? imageData.length : 0,
     table: TABLE_NAME
   });
@@ -142,7 +150,8 @@ exports.saveImage = async (prompt, imageData, format, duration = 0, isEdit = fal
       created_at: timestamp,
       duration_seconds: duration,
       is_edit: isEditBoolean,
-      source_type: sourceType
+      source_type: sourceType,
+      user_id: userId
     };
     
     console.log('Image record prepared with is_edit:', imageRecord.is_edit);

@@ -2,17 +2,161 @@
 let selectedFiles = [];
 let generatedImage = null;
 let lastGenerationDuration = 0;
+let currentUser = null;
+
+// Auth DOM Elements
+let signInBtn;
+let signOutBtn;
+let userInfo;
+let userAvatar;
+let userName;
 
 // DOM Elements
 document.addEventListener('DOMContentLoaded', () => {
     // Initialize UI elements
     initializeUI();
     
+    // Initialize auth UI elements
+    initializeAuthUI();
+    
     // Initialize Supabase
     initializeSupabase();
     
     // No need to load gallery anymore
 });
+
+// Fetch user's images from the gallery
+async function fetchUserImages() {
+    try {
+        if (!currentUser) {
+            console.log('No user logged in, cannot fetch user images');
+            return [];
+        }
+        
+        const response = await fetch(`/api/gallery?userId=${currentUser.id}`, {
+            headers: {
+                'Authorization': `Bearer ${currentUser.session?.access_token}`
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to fetch user images');
+        }
+        
+        const data = await response.json();
+        console.log(`Fetched ${data.results} user images`);
+        return data.data;
+    } catch (error) {
+        console.error('Error fetching user images:', error);
+        showError('Failed to fetch your images. Please try again later.');
+        return [];
+    }
+}
+
+// Delete an image from the gallery
+async function deleteImage(imageId) {
+    try {
+        if (!currentUser) {
+            showError('You must be logged in to delete images');
+            return false;
+        }
+        
+        if (!imageId) {
+            console.error('No image ID provided for deletion');
+            return false;
+        }
+        
+        const response = await fetch(`/api/gallery/${imageId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${currentUser.session?.access_token}`
+            }
+        });
+        
+        if (!response.ok) {
+            let errorMessage = 'Failed to delete image';
+            try {
+                const errorData = await response.json();
+                errorMessage = errorData.message || errorMessage;
+            } catch (parseError) {
+                console.error('Error parsing error response:', parseError);
+            }
+            throw new Error(errorMessage);
+        }
+        
+        showSuccess('Image deleted successfully');
+        return true;
+    } catch (error) {
+        console.error('Error deleting image:', error);
+        showError(error.message || 'Failed to delete image. Please try again later.');
+        return false;
+    }
+}
+
+// Initialize auth UI elements
+function initializeAuthUI() {
+    signInBtn = document.getElementById('signInBtn');
+    signOutBtn = document.getElementById('signOutBtn');
+    userInfo = document.getElementById('userInfo');
+    userAvatar = document.getElementById('userAvatar');
+    userName = document.getElementById('userName');
+    
+    // Set up event listeners
+    signInBtn.addEventListener('click', signInWithGoogle);
+    signOutBtn.addEventListener('click', signOut);
+}
+
+// Sign in with Google
+function signInWithGoogle() {
+    window.supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { 
+            redirectTo: window.location.origin,
+            queryParams: { prompt: 'select_account' }
+        }
+    });
+}
+
+// Sign out
+function signOut() {
+    window.supabase.auth.signOut();
+}
+
+// Handle authentication state
+function handleAuth(session) {
+    if (session) {
+        // User is signed in
+        currentUser = session.user;
+        currentUser.session = session;
+        
+        // Update UI
+        signInBtn.style.display = 'none';
+        signOutBtn.style.display = 'inline';
+        userInfo.style.display = 'flex';
+        
+        // Display user info
+        userAvatar.src = session.user.user_metadata.avatar_url || '';
+        userName.textContent = session.user.user_metadata.full_name || session.user.email;
+        
+        console.log('User signed in:', currentUser);
+        
+        // Fetch user's images
+        fetchUserImages().then(images => {
+            console.log(`User has ${images.length} images`);
+            // You can display the user's images here if needed
+        });
+    } else {
+        // User is signed out
+        currentUser = null;
+        
+        // Update UI
+        signInBtn.style.display = 'inline';
+        signOutBtn.style.display = 'none';
+        userInfo.style.display = 'none';
+        
+        console.log('User signed out');
+    }
+}
 
 // Initialize UI elements and event listeners
 function initializeUI() {
@@ -90,12 +234,27 @@ function initializeUI() {
 function initializeSupabase() {
     try {
         // Check if SUPABASE_URL and SUPABASE_KEY are defined in config.js
-        if (!SUPABASE_URL || !SUPABASE_KEY) {
+        if (!window.ENV.SUPABASE_URL || !window.ENV.SUPABASE_KEY) {
             console.error('Supabase configuration is missing. Please check your config.js file.');
             return;
         }
         
-        window.supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        // Initialize Supabase client
+        window.supabase = supabase.createClient(
+            window.ENV.SUPABASE_URL, 
+            window.ENV.SUPABASE_KEY
+        );
+        
+        // Set up auth state listener
+        window.supabase.auth.onAuthStateChange((_event, session) => {
+            handleAuth(session);
+        });
+        
+        // Check current session
+        window.supabase.auth.getSession().then(({ data: { session } }) => {
+            handleAuth(session);
+        });
+        
         console.log('Supabase initialized successfully');
     } catch (error) {
         console.error('Failed to initialize Supabase:', error);
@@ -465,12 +624,16 @@ async function saveToSupabase(image, isEdit = false) {
     }
     
     try {
+        // Get user ID if user is logged in
+        const userId = currentUser ? currentUser.id : null;
+        
         console.log('Saving image to Supabase...', {
             prompt: image.prompt,
             format: image.format,
             isEdit: isEdit,
             dataLength: image.data ? image.data.length : 0,
-            duration: lastGenerationDuration
+            duration: lastGenerationDuration,
+            userId: userId
         });
         
         // Check if Supabase is initialized
@@ -484,7 +647,8 @@ async function saveToSupabase(image, isEdit = false) {
         const response = await fetch(`/api/gallery?_=${timestamp}`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Authorization': currentUser ? `Bearer ${currentUser.session?.access_token}` : ''
             },
             body: JSON.stringify({
                 prompt: image.prompt,
@@ -492,7 +656,8 @@ async function saveToSupabase(image, isEdit = false) {
                 format: image.format,
                 duration: lastGenerationDuration || 0,
                 isEdit: isEdit === true,
-                sourceType: isEdit ? 'edit' : 'text'
+                sourceType: isEdit ? 'edit' : 'text',
+                user_id: userId
             })
         });
         

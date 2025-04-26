@@ -10,8 +10,24 @@
 <body>
     <div class="container">
         <header>
-            <h1>OpenAI Image Generator</h1>
-            <p>Upload images and generate new ones with AI</p>
+            <div class="header-content">
+                <div class="title-container">
+                    <h1>OpenAI Image Generator</h1>
+                    <p>Upload images and generate new ones with AI</p>
+                </div>
+                <div class="auth-container">
+                    <button id="signInBtn" class="auth-btn">
+                        <i class="fab fa-google"></i> Sign in with Google
+                    </button>
+                    <button id="signOutBtn" class="auth-btn" style="display: none;">
+                        Sign Out
+                    </button>
+                    <div id="userInfo" style="display: none;">
+                        <img id="userAvatar" src="" alt="User Avatar">
+                        <span id="userName"></span>
+                    </div>
+                </div>
+            </div>
         </header>
 
         <main>
