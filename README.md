@@ -2,8 +2,6 @@
 
 A full-stack web application that allows users to generate and edit images using OpenAI's Image API. Users can input prompts to generate images from scratch or upload reference images to create variations.
 
-![OpenAI Image Generator](https://i.imgur.com/placeholder-screenshot.png)
-
 ## Features
 
 - Generate images from text prompts using OpenAI's Image API
