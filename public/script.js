@@ -156,6 +156,9 @@ async function initializeSupabaseClient() {
 
 // Initialize UI elements and event listeners
 function initializeUI() {
+    // Set Grok as default model
+    document.getElementById('model-select').value = 'grok';
+    
     // Initialize prompt buttons
     const promptButtons = document.querySelectorAll('.prompt-btn');
     promptButtons.forEach(button => {
