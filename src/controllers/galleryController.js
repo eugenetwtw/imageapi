@@ -42,7 +42,7 @@ exports.getAllImages = async (req, res, next) => {
  */
 exports.saveImage = async (req, res, next) => {
   try {
-    const { prompt, imageData, format, duration, isEdit, sourceType, user_id } = req.body;
+    const { prompt, imageData, format, duration, isEdit, sourceType, user_id, model } = req.body;
 
     // Validate request
     if (!prompt || !imageData || !format) {
@@ -54,7 +54,7 @@ exports.saveImage = async (req, res, next) => {
 
     // Ensure isEdit is a boolean and log it
     const isEditBoolean = isEdit === true;
-    console.log('Saving image with isEdit:', isEdit, 'converted to:', isEditBoolean, 'user_id:', userId);
+    console.log('Saving image with isEdit:', isEdit, 'converted to:', isEditBoolean, 'user_id:', userId, 'model:', model);
     
     // Save image to gallery
     const result = await supabaseService.saveImage(
@@ -64,7 +64,8 @@ exports.saveImage = async (req, res, next) => {
       duration || 0, 
       isEditBoolean, 
       sourceType || 'text',
-      userId
+      userId,
+      model || 'openai'
     );
 
     res.status(201).json({

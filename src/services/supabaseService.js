@@ -122,9 +122,10 @@ exports.getAllImages = async (limit = null, offset = 0, fetchTotal = false, user
  * @param {boolean} isEdit - Whether this was an edit operation
  * @param {string} sourceType - Source type of the image (text, edit, etc.)
  * @param {string} userId - The ID of the user who created the image (optional)
+ * @param {string} model - The model used for image generation (e.g., 'openai', 'grok-2-image')
  * @returns {Object} Saved image data
  */
-exports.saveImage = async (prompt, imageData, format, duration = 0, isEdit = false, sourceType = 'text', userId = null) => {
+exports.saveImage = async (prompt, imageData, format, duration = 0, isEdit = false, sourceType = 'text', userId = null, model = 'openai') => {
   // Ensure isEdit is a boolean
   const isEditBoolean = isEdit === true;
   
@@ -136,6 +137,7 @@ exports.saveImage = async (prompt, imageData, format, duration = 0, isEdit = fal
     isEditBoolean: isEditBoolean,
     sourceType: sourceType,
     userId: userId,
+    model: model,
     imageDataLength: imageData ? imageData.length : 0,
     table: TABLE_NAME
   });
@@ -151,7 +153,8 @@ exports.saveImage = async (prompt, imageData, format, duration = 0, isEdit = fal
       duration_seconds: duration,
       is_edit: isEditBoolean,
       source_type: sourceType,
-      user_id: userId
+      user_id: userId,
+      model: model
     };
     
     console.log('Image record prepared with is_edit:', imageRecord.is_edit);
