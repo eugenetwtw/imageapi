@@ -350,6 +350,7 @@ async function generateImage() {
     // Get options
     const size = document.getElementById('size-select').value;
     const model = document.getElementById('model-select').value;
+    console.log('Selected model for image generation:', model);
     const quality = document.getElementById('quality-select').value;
     const format = 'png'; // Hardcoded to PNG as per user request
     const compression = null; // Compression is removed as it's not needed for PNG
