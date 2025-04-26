@@ -125,85 +125,21 @@ function initializeSupabase() {
 }
 
 // Initialize Supabase client
-function initializeSupabaseClient() {
+async function initializeSupabaseClient() {
     try {
-        // Use the server's auth endpoints instead of direct Supabase access
-        // This is more secure as it doesn't expose API keys in client-side code
-        
         // Supabase URL is public information and can be included directly
         const SUPABASE_URL = 'https://cluafbfcguzeglnliykr.supabase.co';
         
-        // Create a proxy object that will handle auth operations through our server API
-        window.supabase = {
-            auth: {
-                signInWithOAuth: async (options) => {
-                    // Redirect to server endpoint that will handle OAuth
-                    window.location.href = `/api/auth/signin?provider=${options.provider}&redirectTo=${options.options.redirectTo}`;
-                },
-                signOut: async () => {
-                    // Clear any local auth state
-                    localStorage.removeItem('supabase.auth.token');
-                    // Trigger auth state change
-                    window.dispatchEvent(new Event('auth-state-change'));
-                    return { error: null };
-                },
-                onAuthStateChange: (callback) => {
-                    // Add event listener for auth state changes
-                    const handler = () => {
-                        // Check session with the server
-                        fetch('/api/auth/session')
-                            .then(res => res.json())
-                            .then(data => {
-                                if (data.status === 'success') {
-                                    if (data.data.valid) {
-                                        callback('SIGNED_IN', { user: data.data.user });
-                                    } else {
-                                        callback('SIGNED_OUT', null);
-                                    }
-                                }
-                            })
-                            .catch(err => {
-                                console.error('Error checking session:', err);
-                                callback('SIGNED_OUT', null);
-                            });
-                    };
-                    
-                    // Listen for auth state changes
-                    window.addEventListener('auth-state-change', handler);
-                    
-                    // Return unsubscribe function
-                    return {
-                        data: { subscription: { unsubscribe: () => {
-                            window.removeEventListener('auth-state-change', handler);
-                        }}},
-                        error: null
-                    };
-                },
-                getSession: async () => {
-                    try {
-                        const res = await fetch('/api/auth/session');
-                        const data = await res.json();
-                        
-                        if (data.status === 'success' && data.data.valid) {
-                            return {
-                                data: {
-                                    session: {
-                                        user: data.data.user,
-                                        access_token: localStorage.getItem('supabase.auth.token')
-                                    }
-                                },
-                                error: null
-                            };
-                        } else {
-                            return { data: { session: null }, error: null };
-                        }
-                    } catch (error) {
-                        console.error('Error getting session:', error);
-                        return { data: { session: null }, error };
-                    }
-                }
-            }
-        };
+        // Fetch the Supabase key from the server
+        const response = await fetch('/api/auth/key');
+        const data = await response.json();
+        
+        if (!data.status === 'success' || !data.data || !data.data.key) {
+            throw new Error('Failed to get Supabase key from server');
+        }
+        
+        // Initialize the real Supabase client with the key from the server
+        window.supabase = supabase.createClient(SUPABASE_URL, data.data.key);
         
         // Set up auth state listener
         window.supabase.auth.onAuthStateChange((_event, session) => {

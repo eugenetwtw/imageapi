@@ -4,6 +4,9 @@ const { verifyAuth } = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
+// Get Supabase key for client-side use (no auth required)
+router.get('/key', authController.getSupabaseKey);
+
 // OAuth sign-in route (no auth required)
 router.get('/signin', authController.signInWithOAuth);
 

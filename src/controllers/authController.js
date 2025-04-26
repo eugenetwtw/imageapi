@@ -8,6 +8,27 @@ const supabase = createClient(
 );
 
 /**
+ * Get Supabase anon key for client-side use
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next middleware function
+ */
+exports.getSupabaseKey = async (req, res, next) => {
+  try {
+    // Return the anon key from environment variables
+    res.status(200).json({
+      status: 'success',
+      data: {
+        key: process.env.SUPABASE_KEY
+      }
+    });
+  } catch (error) {
+    console.error('Error getting Supabase key:', error);
+    next(createError(500, error.message || 'Failed to get Supabase key'));
+  }
+};
+
+/**
  * Handle OAuth sign-in
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
