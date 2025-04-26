@@ -24,8 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize Supabase
     initializeSupabase();
     
-    // Load gallery images
-    loadGallery();
+    // Gallery functionality removed
 });
 
 // Initialize auth UI elements
@@ -85,8 +84,7 @@ function handleAuth(session) {
         
         console.log('User signed in:', currentUser.id);
         
-        // Reload gallery to show user's images
-        loadGallery();
+        // Gallery functionality removed
     } else {
         // User is signed out
         currentUser = null;
@@ -98,8 +96,7 @@ function handleAuth(session) {
         
         console.log('User signed out');
         
-        // Reload gallery to show public images
-        loadGallery();
+        // Gallery functionality removed
     }
 }
 
@@ -256,20 +253,7 @@ function initializeUI() {
     const saveBtn = document.getElementById('save-btn');
     saveBtn.style.display = 'none'; // Hide the save button
     
-    // Add history button to the header
-    let header = document.querySelector('header');
-    if (!header) {
-        // Fallback if header is not found, create a container or use body
-        header = document.body;
-        console.warn('Header element not found, appending history button to body.');
-    }
-    const historyBtn = document.createElement('button');
-    historyBtn.className = 'primary-btn';
-    historyBtn.style.marginTop = '1rem';
-    historyBtn.style.width = 'auto';
-    historyBtn.textContent = 'View History';
-    historyBtn.addEventListener('click', showHistory);
-    header.appendChild(historyBtn);
+    // History button removed
 }
 
 // Prevent default drag behaviors
@@ -482,8 +466,7 @@ async function generateImage() {
             
             if (generatedImages.length > 0) {
                 downloadBtn.classList.remove('hidden');
-                // Automatically save to gallery after generation
-                saveToGallery();
+                // Gallery functionality removed
             } else {
                 throw new Error('Failed to generate any images. Please try again.');
             }
@@ -506,8 +489,7 @@ async function generateImage() {
                     
                     resultContainer.appendChild(img);
                     downloadBtn.classList.remove('hidden');
-                    // Automatically save to gallery after generation
-                    saveToGallery();
+                    // Gallery functionality removed
                 } else if (result.data.url) {
                     // Handle URL response
                     const img = document.createElement('img');
@@ -654,225 +636,7 @@ function downloadImage() {
     }
 }
 
-// Save image to gallery
-async function saveToGallery() {
-    if (!generatedImage && generatedImages.length === 0) return;
-    
-    try {
-        let savedCount = 0;
-        // If there are multiple images, save each one
-        if (generatedImages.length > 0) {
-            for (let i = 0; i < generatedImages.length; i++) {
-                const img = generatedImages[i];
-                const response = await fetch('/api/gallery', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': currentUser ? `Bearer ${currentUser.session?.access_token}` : ''
-                    },
-                    body: JSON.stringify({
-                        prompt: img.prompt,
-                        imageData: img.data,
-                        format: img.format,
-                        duration: lastGenerationDuration,
-                        isEdit: isEditOperation === true,
-                        sourceType: isEditOperation ? 'edit' : 'text',
-                        user_id: currentUser ? currentUser.id : null
-                    })
-                });
-                
-                if (!response.ok) {
-                    const error = await response.json();
-                    showError(`Failed to save image ${i + 1} to gallery. Continuing with others.`);
-                } else {
-                    savedCount++;
-                }
-            }
-            if (savedCount > 0) {
-                showSuccess(`${savedCount} image(s) saved to gallery successfully!`);
-            } else {
-                showError('Failed to save any images to gallery.');
-            }
-        } else {
-            // Single image case
-            const response = await fetch('/api/gallery', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': currentUser ? `Bearer ${currentUser.session?.access_token}` : ''
-                },
-                body: JSON.stringify({
-                    prompt: generatedImage.prompt,
-                    imageData: generatedImage.data,
-                    format: generatedImage.format,
-                    duration: lastGenerationDuration,
-                    isEdit: isEditOperation === true,
-                    sourceType: isEditOperation ? 'edit' : 'text',
-                    user_id: currentUser ? currentUser.id : null
-                })
-            });
-            
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.message || 'Failed to save image to gallery');
-            }
-            
-            showSuccess('Image saved to gallery successfully!');
-            savedCount = 1;
-        }
-        
-        // Reload gallery only once after all saves
-        if (savedCount > 0) {
-            loadGallery();
-        }
-    } catch (error) {
-        console.error('Error saving to gallery:', error);
-        showError('Failed to save image(s) to gallery. Please try again.');
-    }
-}
-
-// Load gallery images
-async function loadGallery() {
-    try {
-        // Add user ID to query params if user is logged in
-        const userId = currentUser ? currentUser.id : null;
-        const url = userId ? `/api/gallery?userId=${userId}` : '/api/gallery';
-        
-        const response = await fetch(url, {
-            headers: {
-                'Authorization': currentUser ? `Bearer ${currentUser.session?.access_token}` : ''
-            }
-        });
-        
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Failed to load gallery');
-        }
-        
-        const data = await response.json();
-        const images = data.data || [];
-        
-        const galleryContainer = document.getElementById('gallery-container');
-        
-        // Check if gallery container exists
-        if (!galleryContainer) {
-            console.error('Gallery container not found');
-            return;
-        }
-        
-        // Clear existing gallery
-        galleryContainer.innerHTML = '';
-        
-        const emptyMessage = document.getElementById('gallery-empty-message');
-        
-        if (images && images.length > 0) {
-            // Only update emptyMessage if it exists
-            if (emptyMessage) {
-                emptyMessage.style.display = 'none';
-            }
-            
-            // Add each image to gallery
-            images.forEach(item => {
-                const galleryItem = document.createElement('div');
-                galleryItem.className = 'gallery-item';
-                
-                const img = document.createElement('img');
-                img.src = `data:image/${item.format};base64,${item.image_data}`;
-                img.alt = item.prompt;
-                
-                const overlay = document.createElement('div');
-                overlay.className = 'gallery-item-overlay';
-                
-                const prompt = document.createElement('p');
-                prompt.textContent = item.prompt;
-                
-                const actions = document.createElement('div');
-                actions.className = 'gallery-item-actions';
-                
-                const downloadBtn = document.createElement('button');
-                downloadBtn.innerHTML = '<i class="fas fa-download"></i> Download';
-                downloadBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    downloadGalleryImage(item);
-                });
-                
-                const deleteBtn = document.createElement('button');
-                deleteBtn.innerHTML = '<i class="fas fa-trash"></i> Delete';
-                deleteBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    deleteGalleryImage(item.id);
-                });
-                
-                actions.appendChild(downloadBtn);
-                actions.appendChild(deleteBtn);
-                
-                overlay.appendChild(prompt);
-                overlay.appendChild(actions);
-                
-                galleryItem.appendChild(img);
-                galleryItem.appendChild(overlay);
-                
-                galleryContainer.appendChild(galleryItem);
-            });
-        } else if (emptyMessage) {
-            // Only update emptyMessage if it exists
-            emptyMessage.style.display = 'block';
-        }
-    } catch (error) {
-        console.error('Error loading gallery:', error);
-        const galleryContainer = document.getElementById('gallery-container');
-        if (galleryContainer) {
-            galleryContainer.innerHTML = `<div class="error">Failed to load gallery. Please try again.</div>`;
-        } else {
-            console.error('Gallery container not found for error display');
-        }
-    }
-}
-
-// Show history in a new tab
-function showHistory() {
-    window.open('/history.html', '_blank');
-}
-
-// Download gallery image
-function downloadGalleryImage(item) {
-    const link = document.createElement('a');
-    link.href = `data:image/${item.format};base64,${item.image_data}`;
-    link.download = `gallery-image-${Date.now()}.${item.format}`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-}
-
-// Delete gallery image
-async function deleteGalleryImage(id) {
-    try {
-        if (!currentUser) {
-            showError('You must be logged in to delete images');
-            return;
-        }
-        
-        const response = await fetch(`/api/gallery/${id}`, {
-            method: 'DELETE',
-            headers: {
-                'Authorization': `Bearer ${currentUser.session?.access_token}`
-            }
-        });
-        
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Failed to delete image');
-        }
-        
-        showSuccess('Image deleted successfully!');
-        
-        // Reload gallery
-        loadGallery();
-    } catch (error) {
-        console.error('Error deleting image:', error);
-        showError('Failed to delete image. Please try again.');
-    }
-}
+// Gallery functionality removed
 
 // Show error message
 function showError(message) {
