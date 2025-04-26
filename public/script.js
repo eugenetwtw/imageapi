@@ -127,17 +127,80 @@ function initializeSupabase() {
 // Initialize Supabase client
 function initializeSupabaseClient() {
     try {
-        // Get Supabase URL and key from environment variables
-        const SUPABASE_URL = 'https://cluafbfcguzeglnliykr.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNsdWFmYmZjZ3V6ZWdsbmxpeWtyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDUxMzU2OTAsImV4cCI6MjA2MDcxMTY5MH0.R7v1TtyOdJp4iY0ZeAN5CYZyN2n-GGDNvAGj8nuOOD0';
+        // Use the server's auth endpoints instead of direct Supabase access
+        // This is more secure as it doesn't expose API keys in client-side code
         
-        if (!SUPABASE_URL || !SUPABASE_KEY) {
-            console.error('Supabase configuration is missing');
-            return;
-        }
-        
-        // Initialize Supabase client
-        window.supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        // Create a proxy object that will handle auth operations through our server API
+        window.supabase = {
+            auth: {
+                signInWithOAuth: async (options) => {
+                    // Redirect to server endpoint that will handle OAuth
+                    window.location.href = `/api/auth/signin?provider=${options.provider}&redirectTo=${options.options.redirectTo}`;
+                },
+                signOut: async () => {
+                    // Clear any local auth state
+                    localStorage.removeItem('supabase.auth.token');
+                    // Trigger auth state change
+                    window.dispatchEvent(new Event('auth-state-change'));
+                    return { error: null };
+                },
+                onAuthStateChange: (callback) => {
+                    // Add event listener for auth state changes
+                    const handler = () => {
+                        // Check session with the server
+                        fetch('/api/auth/session')
+                            .then(res => res.json())
+                            .then(data => {
+                                if (data.status === 'success') {
+                                    if (data.data.valid) {
+                                        callback('SIGNED_IN', { user: data.data.user });
+                                    } else {
+                                        callback('SIGNED_OUT', null);
+                                    }
+                                }
+                            })
+                            .catch(err => {
+                                console.error('Error checking session:', err);
+                                callback('SIGNED_OUT', null);
+                            });
+                    };
+                    
+                    // Listen for auth state changes
+                    window.addEventListener('auth-state-change', handler);
+                    
+                    // Return unsubscribe function
+                    return {
+                        data: { subscription: { unsubscribe: () => {
+                            window.removeEventListener('auth-state-change', handler);
+                        }}},
+                        error: null
+                    };
+                },
+                getSession: async () => {
+                    try {
+                        const res = await fetch('/api/auth/session');
+                        const data = await res.json();
+                        
+                        if (data.status === 'success' && data.data.valid) {
+                            return {
+                                data: {
+                                    session: {
+                                        user: data.data.user,
+                                        access_token: localStorage.getItem('supabase.auth.token')
+                                    }
+                                },
+                                error: null
+                            };
+                        } else {
+                            return { data: { session: null }, error: null };
+                        }
+                    } catch (error) {
+                        console.error('Error getting session:', error);
+                        return { data: { session: null }, error };
+                    }
+                }
+            }
+        };
         
         // Set up auth state listener
         window.supabase.auth.onAuthStateChange((_event, session) => {

@@ -1,4 +1,45 @@
 const { createError } = require('../utils/errorUtils');
+const { createClient } = require('@supabase/supabase-js');
+
+// Initialize Supabase client
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_KEY
+);
+
+/**
+ * Handle OAuth sign-in
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next middleware function
+ */
+exports.signInWithOAuth = async (req, res, next) => {
+  try {
+    const { provider, redirectTo } = req.query;
+    
+    if (!provider) {
+      return next(createError(400, 'Provider is required'));
+    }
+    
+    // Get the OAuth URL from Supabase
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo: redirectTo || process.env.REDIRECT_URL || `${req.protocol}://${req.get('host')}`
+      }
+    });
+    
+    if (error) {
+      return next(createError(500, error.message || 'Failed to generate OAuth URL'));
+    }
+    
+    // Redirect to the OAuth URL
+    res.redirect(data.url);
+  } catch (error) {
+    console.error('Error in OAuth sign-in:', error);
+    next(createError(500, error.message || 'Failed to initiate OAuth sign-in'));
+  }
+};
 
 /**
  * Get the current authenticated user
