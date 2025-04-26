@@ -4,15 +4,156 @@ let generatedImage = null;
 let generatedImages = []; // Array to store multiple generated images
 let lastGenerationDuration = 0;
 let isEditOperation = false;
+let currentUser = null; // Current authenticated user
+
+// Auth DOM Elements
+let signInBtn;
+let signOutBtn;
+let userInfo;
+let userAvatar;
+let userName;
 
 // DOM Elements
 document.addEventListener('DOMContentLoaded', () => {
     // Initialize UI elements
     initializeUI();
     
+    // Initialize auth UI elements
+    initializeAuthUI();
+    
+    // Initialize Supabase
+    initializeSupabase();
+    
     // Load gallery images
     loadGallery();
 });
+
+// Initialize auth UI elements
+function initializeAuthUI() {
+    signInBtn = document.getElementById('signInBtn');
+    signOutBtn = document.getElementById('signOutBtn');
+    userInfo = document.getElementById('userInfo');
+    userAvatar = document.getElementById('userAvatar');
+    userName = document.getElementById('userName');
+    
+    // Set up event listeners
+    if (signInBtn) signInBtn.addEventListener('click', signInWithGoogle);
+    if (signOutBtn) signOutBtn.addEventListener('click', signOut);
+}
+
+// Sign in with Google
+function signInWithGoogle() {
+    if (!window.supabase) {
+        showError('Supabase client not initialized');
+        return;
+    }
+    
+    window.supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { 
+            redirectTo: window.location.origin,
+            queryParams: { prompt: 'select_account' }
+        }
+    });
+}
+
+// Sign out
+function signOut() {
+    if (!window.supabase) {
+        showError('Supabase client not initialized');
+        return;
+    }
+    
+    window.supabase.auth.signOut();
+}
+
+// Handle authentication state
+function handleAuth(session) {
+    if (session) {
+        // User is signed in
+        currentUser = session.user;
+        currentUser.session = session;
+        
+        // Update UI
+        if (signInBtn) signInBtn.style.display = 'none';
+        if (signOutBtn) signOutBtn.style.display = 'inline';
+        if (userInfo) userInfo.style.display = 'flex';
+        
+        // Display user info
+        if (userAvatar) userAvatar.src = session.user.user_metadata.avatar_url || '';
+        if (userName) userName.textContent = session.user.user_metadata.full_name || session.user.email;
+        
+        console.log('User signed in:', currentUser.id);
+        
+        // Reload gallery to show user's images
+        loadGallery();
+    } else {
+        // User is signed out
+        currentUser = null;
+        
+        // Update UI
+        if (signInBtn) signInBtn.style.display = 'inline';
+        if (signOutBtn) signOutBtn.style.display = 'none';
+        if (userInfo) userInfo.style.display = 'none';
+        
+        console.log('User signed out');
+        
+        // Reload gallery to show public images
+        loadGallery();
+    }
+}
+
+// Initialize Supabase client
+function initializeSupabase() {
+    try {
+        // Load Supabase script if not already loaded
+        if (typeof supabase === 'undefined') {
+            console.warn('Supabase client not loaded. Adding script tag.');
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+            script.onload = () => {
+                console.log('Supabase script loaded');
+                initializeSupabaseClient();
+            };
+            document.head.appendChild(script);
+        } else {
+            initializeSupabaseClient();
+        }
+    } catch (error) {
+        console.error('Failed to initialize Supabase:', error);
+    }
+}
+
+// Initialize Supabase client
+function initializeSupabaseClient() {
+    try {
+        // Get Supabase URL and key from environment variables
+        const SUPABASE_URL = 'https://cluafbfcguzeglnliykr.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNsdWFmYmZjZ3V6ZWdsbmxpeWtyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDUxMzU2OTAsImV4cCI6MjA2MDcxMTY5MH0.R7v1TtyOdJp4iY0ZeAN5CYZyN2n-GGDNvAGj8nuOOD0';
+        
+        if (!SUPABASE_URL || !SUPABASE_KEY) {
+            console.error('Supabase configuration is missing');
+            return;
+        }
+        
+        // Initialize Supabase client
+        window.supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        // Set up auth state listener
+        window.supabase.auth.onAuthStateChange((_event, session) => {
+            handleAuth(session);
+        });
+        
+        // Check current session
+        window.supabase.auth.getSession().then(({ data: { session } }) => {
+            handleAuth(session);
+        });
+        
+        console.log('Supabase initialized successfully');
+    } catch (error) {
+        console.error('Failed to initialize Supabase client:', error);
+    }
+}
 
 // Initialize UI elements and event listeners
 function initializeUI() {
@@ -524,7 +665,8 @@ async function saveToGallery() {
                 const response = await fetch('/api/gallery', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'Authorization': currentUser ? `Bearer ${currentUser.session?.access_token}` : ''
                     },
                     body: JSON.stringify({
                         prompt: img.prompt,
@@ -532,7 +674,8 @@ async function saveToGallery() {
                         format: img.format,
                         duration: lastGenerationDuration,
                         isEdit: isEditOperation === true,
-                        sourceType: isEditOperation ? 'edit' : 'text'
+                        sourceType: isEditOperation ? 'edit' : 'text',
+                        user_id: currentUser ? currentUser.id : null
                     })
                 });
                 
@@ -553,7 +696,8 @@ async function saveToGallery() {
             const response = await fetch('/api/gallery', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Authorization': currentUser ? `Bearer ${currentUser.session?.access_token}` : ''
                 },
                 body: JSON.stringify({
                     prompt: generatedImage.prompt,
@@ -561,7 +705,8 @@ async function saveToGallery() {
                     format: generatedImage.format,
                     duration: lastGenerationDuration,
                     isEdit: isEditOperation === true,
-                    sourceType: isEditOperation ? 'edit' : 'text'
+                    sourceType: isEditOperation ? 'edit' : 'text',
+                    user_id: currentUser ? currentUser.id : null
                 })
             });
             
@@ -587,7 +732,15 @@ async function saveToGallery() {
 // Load gallery images
 async function loadGallery() {
     try {
-        const response = await fetch('/api/gallery');
+        // Add user ID to query params if user is logged in
+        const userId = currentUser ? currentUser.id : null;
+        const url = userId ? `/api/gallery?userId=${userId}` : '/api/gallery';
+        
+        const response = await fetch(url, {
+            headers: {
+                'Authorization': currentUser ? `Bearer ${currentUser.session?.access_token}` : ''
+            }
+        });
         
         if (!response.ok) {
             const error = await response.json();
@@ -692,8 +845,16 @@ function downloadGalleryImage(item) {
 // Delete gallery image
 async function deleteGalleryImage(id) {
     try {
+        if (!currentUser) {
+            showError('You must be logged in to delete images');
+            return;
+        }
+        
         const response = await fetch(`/api/gallery/${id}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${currentUser.session?.access_token}`
+            }
         });
         
         if (!response.ok) {

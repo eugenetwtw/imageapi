@@ -11,8 +11,24 @@
 <body>
     <div class="container">
         <header>
-            <h1>OpenAI Image Generator</h1>
-            <p>Generate images from text prompts or edit existing images with AI.</p>
+            <div class="header-content">
+                <div class="title-container">
+                    <h1>OpenAI Image Generator</h1>
+                    <p>Generate images from text prompts or edit existing images with AI.</p>
+                </div>
+                <div class="auth-container">
+                    <button id="signInBtn" class="auth-btn">
+                        <i class="fab fa-google"></i> Sign in with Google
+                    </button>
+                    <button id="signOutBtn" class="auth-btn" style="display: none;">
+                        Sign Out
+                    </button>
+                    <div id="userInfo" style="display: none;">
+                        <img id="userAvatar" src="" alt="User Avatar">
+                        <span id="userName"></span>
+                    </div>
+                </div>
+            </div>
         </header>
 
         <section class="input-section">
@@ -132,11 +148,7 @@
             </div>
         </section>
 
-        <section id="gallery-section">
-            <h2>Gallery</h2>
-            <p id="gallery-empty-message" style="display: none;">Your gallery is empty. Generate and save some images to see them here.</p>
-            <div id="gallery-container"></div>
-        </section>
+        <!-- Gallery section removed as requested - now only available in history.html -->
     </div>
 
     <script src="script.js"></script>
