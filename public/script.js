@@ -130,6 +130,9 @@ function initializeSupabaseClient() {
         // Use the server's auth endpoints instead of direct Supabase access
         // This is more secure as it doesn't expose API keys in client-side code
         
+        // Supabase URL is public information and can be included directly
+        const SUPABASE_URL = 'https://cluafbfcguzeglnliykr.supabase.co';
+        
         // Create a proxy object that will handle auth operations through our server API
         window.supabase = {
             auth: {
