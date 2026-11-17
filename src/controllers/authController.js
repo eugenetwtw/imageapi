@@ -1,11 +1,10 @@
 const { createError } = require('../utils/errorUtils');
 const { createClient } = require('@supabase/supabase-js');
 
-// Initialize Supabase client
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_KEY
-);
+// Initialize Supabase client only when configured
+const supabase = (process.env.SUPABASE_URL && process.env.SUPABASE_KEY)
+  ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY)
+  : null;
 
 /**
  * Get Supabase anon key for client-side use
@@ -19,7 +18,7 @@ exports.getSupabaseKey = async (req, res, next) => {
     res.status(200).json({
       status: 'success',
       data: {
-        key: process.env.SUPABASE_KEY
+        key: process.env.SUPABASE_KEY || null
       }
     });
   } catch (error) {
@@ -36,6 +35,10 @@ exports.getSupabaseKey = async (req, res, next) => {
  */
 exports.signInWithOAuth = async (req, res, next) => {
   try {
+    if (!supabase) {
+      return next(createError(503, 'Authentication service is not configured'));
+    }
+
     const { provider, redirectTo } = req.query;
     
     if (!provider) {

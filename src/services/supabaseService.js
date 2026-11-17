@@ -1,10 +1,9 @@
 const { createClient } = require('@supabase/supabase-js');
 
-// Initialize Supabase client
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_KEY
-);
+// Initialize Supabase client only when configured
+const supabase = (process.env.SUPABASE_URL && process.env.SUPABASE_KEY)
+  ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY)
+  : null;
 
 // Table name
 const TABLE_NAME = 'imageapi';
@@ -27,6 +26,9 @@ const countCache = {
  */
 exports.getAllImages = async (limit = null, offset = 0, fetchTotal = false, userId = null) => {
   try {
+    if (!supabase) {
+      return { data: [], total: 0 };
+    }
     console.log('Fetching images from Supabase table:', TABLE_NAME, 'with limit:', limit, 'and offset:', offset, 'fetchTotal:', fetchTotal, 'userId:', userId);
     console.time('Supabase Fetch Data Time');
     
@@ -143,6 +145,9 @@ exports.saveImage = async (prompt, imageData, format, duration = 0, isEdit = fal
   });
   
   try {
+    if (!supabase) {
+      throw new Error('Supabase storage is not configured');
+    }
     const timestamp = new Date().toISOString();
     
     const imageRecord = {
@@ -192,6 +197,9 @@ exports.saveImage = async (prompt, imageData, format, duration = 0, isEdit = fal
  */
 exports.getImageById = async (id) => {
   try {
+    if (!supabase) {
+      return null;
+    }
     const { data, error } = await supabase
       .from(TABLE_NAME)
       .select('*')
@@ -214,6 +222,9 @@ exports.getImageById = async (id) => {
  */
 exports.deleteImage = async (id) => {
   try {
+    if (!supabase) {
+      throw new Error('Supabase storage is not configured');
+    }
     const { error } = await supabase
       .from(TABLE_NAME)
       .delete()

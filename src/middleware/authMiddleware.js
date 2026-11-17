@@ -1,11 +1,10 @@
 const { createError } = require('../utils/errorUtils');
 const { createClient } = require('@supabase/supabase-js');
 
-// Initialize Supabase client
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_KEY
-);
+// Initialize Supabase client only when configured
+const supabase = (process.env.SUPABASE_URL && process.env.SUPABASE_KEY)
+  ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY)
+  : null;
 
 /**
  * Middleware to verify authentication token
@@ -15,6 +14,10 @@ const supabase = createClient(
  */
 exports.verifyAuth = async (req, res, next) => {
   try {
+    if (!supabase) {
+      return next();
+    }
+
     // Get token from Authorization header
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -53,6 +56,10 @@ exports.verifyAuth = async (req, res, next) => {
  */
 exports.requireAuth = async (req, res, next) => {
   try {
+    if (!supabase) {
+      return next(createError(503, 'Authentication service is not configured'));
+    }
+
     // Get token from Authorization header
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
